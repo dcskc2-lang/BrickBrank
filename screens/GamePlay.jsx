@@ -1,35 +1,46 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Grid, CELL_SIZE } from '../components/BlockBlast/Grid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useState, useContext } from 'react';
+import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DraggableShape } from '../components/BlockBlast/DraggableShape';
-import { 
-  createEmptyBoard, 
-  getRandomShapes, 
-  BOARD_SIZE, 
+import { AudioContext } from '../app/(tabs)/index';
+import PauseModal from '../components/BlockBlast/Modals/PauseModal';
+import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
+import {
   canPlaceShape,
-  placeShape,
   checkAndClearLines,
-  checkGameOver
+  checkGameOver,
+  createEmptyBoard,
+  getRandomShapes,
+  placeShape
 } from '../components/BlockBlast/GameLogic';
+import { Grid } from '../components/BlockBlast/Grid';
 
-export default function GamePlay() {
-  const [board, setBoard] = useState(createEmptyBoard());
+const screenWidth = Dimensions.get('window').width;
+
+export default function GamePlay({ route, navigation }) {
+  const boardSize = route?.params?.size || 8;
+  const CELL_SIZE = Math.min(40, Math.floor((screenWidth - 40) / boardSize));
+
+  const [board, setBoard] = useState(createEmptyBoard(boardSize));
   const [availableShapes, setAvailableShapes] = useState(getRandomShapes(3));
   const [score, setScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isPauseModalVisible, setPauseModalVisible] = useState(false);
+  const [clearingCells, setClearingCells] = useState([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const { soundEnabled, toggleSound } = useContext(AudioContext);
   const [gridPos, setGridPos] = useState({ pageX: 0, pageY: 0, width: 0, height: 0 });
-  const [hoverState, setHoverState] = useState(null); // { shape, row, col }
+  const [hoverState, setHoverState] = useState(null);
+  const [playerName, setPlayerName] = useState('');
 
   const onGridLayout = (x, y, w, h, pageX, pageY) => {
     setGridPos({ pageX, pageY, width: w, height: h });
   };
 
-  // Logic gọi liên tục mỗi khi ngón tay di chuyển để dò xem có hợp lệ nhét vào Grid không (để hiện Ghost Preview)
   const handleDragShape = useCallback((shape, currentX, currentY) => {
-    if (isGameOver) return;
-    if (!gridPos.width) return; // Grid chưa load xong
+    if (isGameOver || isPauseModalVisible || isAnimating) return;
+    if (!gridPos.width) return;
 
-    // Xem ngón tay có đang dạo quanh Grid không
     if (
       currentX >= gridPos.pageX &&
       currentX <= gridPos.pageX + gridPos.width &&
@@ -38,35 +49,33 @@ export default function GamePlay() {
     ) {
       const gridX = currentX - gridPos.pageX;
       const gridY = currentY - gridPos.pageY;
-      
+
       const shapeWidth = shape.blocks[0].length * CELL_SIZE;
       const shapeHeight = shape.blocks.length * CELL_SIZE;
-      
+
       const topLeftX = gridX - (shapeWidth / 2);
       const topLeftY = gridY - (shapeHeight / 2);
 
       const col = Math.round(topLeftX / CELL_SIZE);
       const row = Math.round(topLeftY / CELL_SIZE);
 
-      if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
-        if (canPlaceShape(board, shape, row, col)) {
+      if (row >= 0 && row < boardSize && col >= 0 && col < boardSize) {
+        if (canPlaceShape(board, shape, row, col, boardSize)) {
           setHoverState({ shape, row, col });
           return;
         }
       }
     }
-    
-    // Nếu trượt ra ngoài, ẩn bóng đi
     setHoverState(null);
-  }, [board, gridPos, isGameOver]);
+  }, [board, gridPos, isGameOver, isPauseModalVisible, isAnimating, boardSize, CELL_SIZE]);
 
   const handleDragEnd = useCallback(() => {
     setHoverState(null);
   }, []);
 
   const handleDropShape = useCallback((shape, releaseX, releaseY) => {
-    if (isGameOver) return false;
-    setHoverState(null); // Tuột tay khỏi màn là dọn bóng luôn
+    if (isGameOver || isPauseModalVisible || isAnimating) return false;
+    setHoverState(null);
 
     if (
       releaseX >= gridPos.pageX &&
@@ -76,108 +85,145 @@ export default function GamePlay() {
     ) {
       const gridX = releaseX - gridPos.pageX;
       const gridY = releaseY - gridPos.pageY;
-      
+
       const shapeWidth = shape.blocks[0].length * CELL_SIZE;
       const shapeHeight = shape.blocks.length * CELL_SIZE;
-      
+
       const topLeftX = gridX - (shapeWidth / 2);
       const topLeftY = gridY - (shapeHeight / 2);
 
       const col = Math.round(topLeftX / CELL_SIZE);
       const row = Math.round(topLeftY / CELL_SIZE);
 
-      if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
-        if (canPlaceShape(board, shape, row, col)) {
-          let newBoard = placeShape(board, shape, row, col);
-          
+      if (row >= 0 && row < boardSize && col >= 0 && col < boardSize) {
+        if (canPlaceShape(board, shape, row, col, boardSize)) {
+          let placedBoard = placeShape(board, shape, row, col);
           const shapeScore = shape.blocks.flat().filter(x => x === 1).length * 1;
 
-          const clearedResult = checkAndClearLines(newBoard);
-          newBoard = clearedResult.newBoard;
-          const currentScore = score + shapeScore + clearedResult.points;
-          setBoard(newBoard);
-          setScore(currentScore);
+          const clearedResult = checkAndClearLines(placedBoard, boardSize);
 
-          const nextShapes = [...availableShapes];
-          const shapeIndex = nextShapes.findIndex(s => s && s.uid === shape.uid);
-          if (shapeIndex !== -1) {
-            nextShapes[shapeIndex] = null;
-          }
-
-          // Thay mới nếu dùng xong cả 3 block
-          if (nextShapes.every(s => s === null)) {
-            const newRandomShapes = getRandomShapes(3);
-            setAvailableShapes(newRandomShapes);
-            if (checkGameOver(newBoard, newRandomShapes)) {
-              setIsGameOver(true);
+          const processNextMove = (finalBoard) => {
+            const nextShapes = [...availableShapes];
+            const shapeIndex = nextShapes.findIndex(s => s && s.uid === shape.uid);
+            if (shapeIndex !== -1) {
+              nextShapes[shapeIndex] = null;
             }
+
+            if (nextShapes.every(s => s === null)) {
+              const newRandomShapes = getRandomShapes(3);
+              setAvailableShapes(newRandomShapes);
+              if (checkGameOver(finalBoard, newRandomShapes, boardSize)) {
+                setIsGameOver(true);
+              }
+            } else {
+              setAvailableShapes(nextShapes);
+              if (checkGameOver(finalBoard, nextShapes, boardSize)) {
+                setIsGameOver(true);
+              }
+            }
+          };
+
+          // Kích hoạt Hiệu ứng Nổ VFX thay vì ăn điểm chớp nhoáng
+          if (clearedResult.clearingCells.length > 0) {
+            setIsAnimating(true);
+            setClearingCells(clearedResult.clearingCells);
+            setBoard(placedBoard);
+
+            setTimeout(() => {
+              setBoard(clearedResult.newBoard);
+              setScore(prev => prev + shapeScore + clearedResult.points);
+              setClearingCells([]);
+              processNextMove(clearedResult.newBoard);
+              setIsAnimating(false);
+            }, 300);
           } else {
-            setAvailableShapes(nextShapes);
-            if (checkGameOver(newBoard, nextShapes)) {
-              setIsGameOver(true);
-            }
+            setBoard(clearedResult.newBoard);
+            setScore(prev => prev + shapeScore);
+            processNextMove(clearedResult.newBoard);
           }
 
-          return true; // Bỏ đúng ô thành công
+          return true;
         }
       }
     }
+    return false;
+  }, [board, availableShapes, gridPos, isGameOver, isPauseModalVisible, isAnimating, boardSize, CELL_SIZE]);
 
-    return false; // Thất bại
-  }, [board, availableShapes, score, gridPos, isGameOver]);
+  const saveScoreAndExit = async () => {
+    try {
+      if (playerName.trim() !== '') {
+        const storedScores = await AsyncStorage.getItem('highScores');
+        const scoresArray = storedScores ? JSON.parse(storedScores) : [];
+        scoresArray.push({
+          name: playerName,
+          score: score,
+          mode: `${boardSize}x${boardSize}`,
+          date: new Date().toISOString()
+        });
+        scoresArray.sort((a, b) => b.score - a.score);
+        await AsyncStorage.setItem('highScores', JSON.stringify(scoresArray));
+      }
+    } catch (e) { console.log(e); }
+    navigation.navigate('Menu');
+  };
 
-  const resetGame = () => {
-    setBoard(createEmptyBoard());
-    setAvailableShapes(getRandomShapes(3));
-    setScore(0);
-    setIsGameOver(false);
+  const skipAndExit = () => {
+    navigation.navigate('Menu');
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Nút tạm dừng góc trái */}
+      <TouchableOpacity style={styles.topLeftBtn} onPress={() => setPauseModalVisible(true)}>
+        <Text style={{fontSize: 24}}>⏸</Text>
+      </TouchableOpacity>
+
       <Text style={styles.title}>BLOCK BLAST</Text>
       <Text style={styles.scoreText}>Điểm: {score}</Text>
 
       <View style={styles.boardContainer}>
-        {/* Render Grid cùng với bóng do ngón tay rê */}
-        <Grid board={board} onGridLayout={onGridLayout} hoverState={hoverState} />
-        
-        {isGameOver && (
-          <View style={styles.gameOverOverlay}>
-            <Text style={styles.gameOverText}>Game Over!</Text>
-            <TouchableOpacity style={styles.restartBtn} onPress={resetGame}>
-              <Text style={styles.restartBtnText}>Chơi Lại</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <Grid board={board} onGridLayout={onGridLayout} hoverState={hoverState} cellSize={CELL_SIZE} clearingCells={clearingCells} />
+
+        <GameOverModal 
+          visible={isGameOver} 
+          playerName={playerName} 
+          setPlayerName={setPlayerName} 
+          onSave={saveScoreAndExit} 
+          onSkip={skipAndExit} 
+        />
       </View>
 
       <View style={styles.shapesContainer}>
         {availableShapes.map((shape, index) => (
-          // Dùng key = rank id + index để tránh tái sử dụng sai component khi render
           <View key={`shape-slot-${index}-${shape?.uid || 'null'}`} style={styles.shapeSlot}>
-             <DraggableShape 
-                shape={shape} 
-                onDrop={handleDropShape} 
-                onDrag={handleDragShape}
-                onDragEnd={handleDragEnd}
-              />
+            <DraggableShape
+              shape={shape}
+              onDrop={handleDropShape}
+              onDrag={handleDragShape}
+              onDragEnd={handleDragEnd}
+            />
           </View>
         ))}
       </View>
+
+      <PauseModal 
+        visible={isPauseModalVisible} 
+        onClose={() => setPauseModalVisible(false)} 
+        onExit={() => { setPauseModalVisible(false); navigation.navigate('Menu'); }} 
+        soundEnabled={soundEnabled} 
+        toggleSound={toggleSound} 
+      />
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1e272e', justifyContent: 'center', alignItems: 'center' },
+  topLeftBtn: { position: 'absolute', top: 50, left: 20, width: 45, height: 45, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 25, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#00BCD4', marginBottom: 5 },
   scoreText: { fontSize: 50, fontWeight: 'bold', color: '#fff', marginBottom: 20 },
   boardContainer: { marginVertical: 10, position: 'relative', backgroundColor: '#2C3A47', padding: 8, borderRadius: 10, elevation: 5 },
   shapesContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 150, marginTop: 30, paddingHorizontal: 10 },
-  shapeSlot: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center' },
-  gameOverOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: 8 },
-  gameOverText: { fontSize: 40, fontWeight: 'bold', color: '#E91E63', marginBottom: 20 },
-  restartBtn: { backgroundColor: '#00BCD4', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 20, elevation: 3 },
-  restartBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+  shapeSlot: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }
 });

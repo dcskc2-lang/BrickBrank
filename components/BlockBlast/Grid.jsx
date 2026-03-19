@@ -1,7 +1,48 @@
 import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence } from 'react-native-reanimated';
 
-export const Grid = ({ board, onGridLayout, hoverState }) => {
+const AnimatedCell = ({ cellColor, cellSize, hoverColor, isClearing }) => {
+  const scale = useSharedValue(1);
+  
+  useEffect(() => {
+    if (isClearing) {
+       scale.value = withSequence(
+         withTiming(1.3, { duration: 150 }),
+         withTiming(0, { duration: 150 })
+       );
+    } else {
+       scale.value = 1;
+    }
+  }, [isClearing, scale]);
+
+  const style = useAnimatedStyle(() => {
+    let finalOpacity = 1;
+    if (cellColor === '0' && hoverColor) finalOpacity = 0.3;
+    if (isClearing) finalOpacity = scale.value > 0.5 ? 1 : scale.value * 2;
+    
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: finalOpacity
+    };
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.cell,
+        {
+          width: cellSize,
+          height: cellSize,
+          backgroundColor: cellColor === '0' ? (hoverColor || '#2c3e50') : cellColor,
+        },
+        style
+      ]}
+    />
+  );
+};
+
+export const Grid = ({ board, onGridLayout, hoverState, cellSize, clearingCells = [] }) => {
   const gridRef = useRef(null);
 
   useEffect(() => {
@@ -40,23 +81,19 @@ export const Grid = ({ board, onGridLayout, hoverState }) => {
       style={styles.gridContainer}
       ref={gridRef}
     >
-      {board.map((row, rowIndex) => (
+      {board.map((rowArr, rowIndex) => (
         <View key={`row-${rowIndex}`} style={styles.row}>
-          {row.map((cellColor, colIndex) => {
+          {rowArr.map((cellColor, colIndex) => {
             const hoverColor = getHoverColor(rowIndex, colIndex);
+            const isClearing = clearingCells.some(cell => cell.r === rowIndex && cell.c === colIndex);
             
             return (
-              <View
+              <AnimatedCell
                 key={`cell-${rowIndex}-${colIndex}`}
-                style={[
-                  styles.cell,
-                  { 
-                    backgroundColor: cellColor === '0' 
-                      ? (hoverColor || '#2c3e50') // Nếu có ghost thì hiện màu, không thì hiện màu nền
-                      : cellColor,
-                    opacity: (cellColor === '0' && hoverColor) ? 0.3 : 1 // Opacity làm mờ bóng ghost
-                  }
-                ]}
+                cellColor={cellColor}
+                cellSize={cellSize}
+                hoverColor={hoverColor}
+                isClearing={isClearing}
               />
             );
           })}
@@ -65,8 +102,6 @@ export const Grid = ({ board, onGridLayout, hoverState }) => {
     </View>
   );
 };
-
-export const CELL_SIZE = 40; 
 
 const styles = StyleSheet.create({
   gridContainer: {
@@ -78,8 +113,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
     margin: 1,
     borderRadius: 4,
   },

@@ -1,5 +1,3 @@
-export const BOARD_SIZE = 8;
-
 // Mỗi khối hình là một mảng 2 chiều gồm các số 0 và 1.
 // Chúng ta cũng gắn cho chúng một màu sắc hoặc ID duy nhất để vẽ lên màn hình sau này.
 export const SHAPES = [
@@ -16,11 +14,11 @@ export const SHAPES = [
   { id: 'l-large', color: '#00BCD4', blocks: [[1, 0, 0], [1, 0, 0], [1, 1, 1]] },
 ];
 
-export const createEmptyBoard = () => {
-  return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill('0'));
+export const createEmptyBoard = (boardSize = 8) => {
+  return Array.from({ length: boardSize }, () => Array(boardSize).fill('0'));
 };
 
-export const canPlaceShape = (board, shape, startRow, startCol) => {
+export const canPlaceShape = (board, shape, startRow, startCol, boardSize = 8) => {
   const blocks = shape.blocks;
   for (let r = 0; r < blocks.length; r++) {
     for (let c = 0; c < blocks[r].length; c++) {
@@ -30,9 +28,9 @@ export const canPlaceShape = (board, shape, startRow, startCol) => {
 
         if (
           boardRow < 0 ||
-          boardRow >= BOARD_SIZE ||
+          boardRow >= boardSize ||
           boardCol < 0 ||
-          boardCol >= BOARD_SIZE
+          boardCol >= boardSize
         ) {
           return false;
         }
@@ -49,7 +47,7 @@ export const canPlaceShape = (board, shape, startRow, startCol) => {
 export const placeShape = (board, shape, startRow, startCol) => {
   const newBoard = board.map((row) => [...row]);
   const blocks = shape.blocks;
-
+  
   for (let r = 0; r < blocks.length; r++) {
     for (let c = 0; c < blocks[r].length; c++) {
       if (blocks[r][c] === 1) {
@@ -60,18 +58,18 @@ export const placeShape = (board, shape, startRow, startCol) => {
   return newBoard;
 };
 
-export const checkAndClearLines = (board) => {
+export const checkAndClearLines = (board, boardSize = 8) => {
   let newBoard = board.map((row) => [...row]);
   let rowsToClear = [];
   let colsToClear = [];
 
-  for (let r = 0; r < BOARD_SIZE; r++) {
+  for (let r = 0; r < boardSize; r++) {
     if (newBoard[r].every((cell) => cell !== '0')) rowsToClear.push(r);
   }
 
-  for (let c = 0; c < BOARD_SIZE; c++) {
+  for (let c = 0; c < boardSize; c++) {
     let isFull = true;
-    for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let r = 0; r < boardSize; r++) {
       if (newBoard[r][c] === '0') {
         isFull = false;
         break;
@@ -80,28 +78,38 @@ export const checkAndClearLines = (board) => {
     if (isFull) colsToClear.push(c);
   }
 
+  const clearingCells = [];
+
   for (const r of rowsToClear) {
-    for (let c = 0; c < BOARD_SIZE; c++) newBoard[r][c] = '0';
+    for (let c = 0; c < boardSize; c++) {
+      newBoard[r][c] = '0';
+      clearingCells.push({r, c});
+    }
   }
 
   for (const c of colsToClear) {
-    for (let r = 0; r < BOARD_SIZE; r++) newBoard[r][c] = '0';
+    for (let r = 0; r < boardSize; r++) {
+      newBoard[r][c] = '0';
+      if (!clearingCells.some(cell => cell.r === r && cell.c === c)) {
+        clearingCells.push({r, c});
+      }
+    }
   }
 
   const linesCleared = rowsToClear.length + colsToClear.length;
   const points = linesCleared > 0 ? linesCleared * 10 * linesCleared : 0;
 
-  return { newBoard, linesCleared, points };
+  return { newBoard, linesCleared, points, clearingCells };
 };
 
-export const checkGameOver = (board, availableShapes) => {
+export const checkGameOver = (board, availableShapes, boardSize = 8) => {
   const activeShapes = availableShapes.filter((s) => s !== null);
   if (activeShapes.length === 0) return false;
 
   for (const shape of activeShapes) {
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        if (canPlaceShape(board, shape, r, c)) {
+    for (let r = 0; r < boardSize; r++) {
+      for (let c = 0; c < boardSize; c++) {
+        if (canPlaceShape(board, shape, r, c, boardSize)) {
           return false;
         }
       }
@@ -115,9 +123,9 @@ export const getRandomShapes = (count = 3) => {
   const selected = [];
   for (let i = 0; i < count; i++) {
     const randomIndex = Math.floor(Math.random() * SHAPES.length);
-    selected.push({
-      ...SHAPES[randomIndex],
-      uid: Math.random().toString(36).substring(2, 11)
+    selected.push({ 
+      ...SHAPES[randomIndex], 
+      uid: Math.random().toString(36).substring(2, 11) 
     });
   }
   return selected;

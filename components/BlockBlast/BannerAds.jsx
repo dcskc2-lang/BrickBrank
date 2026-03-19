@@ -1,10 +1,34 @@
 import { useState } from 'react';
-import { Platform, StyleSheet, Text, View, } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 
-import { BannerAd, BannerAdSize, TestIds, } from 'react-native-google-mobile-ads';
+let BannerAd, BannerAdSize, TestIds;
+const isWeb = Platform.OS === 'web';
+const isExpoGo = Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient';
+
+if (!isWeb && !isExpoGo) {
+  try {
+    const ads = require('react-native-google-mobile-ads');
+    BannerAd = ads.BannerAd;
+    BannerAdSize = ads.BannerAdSize;
+    TestIds = ads.TestIds;
+  } catch(e) { console.log(e) }
+}
+
 const BannerAds = () => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [errorMessage, setErrorMessage] = useState(null);
+
+    if (isWeb || isExpoGo) {
+        return (
+            <View style={styles.bannerContainer}>
+                <Text style={styles.loadingText}>
+                  {isWeb ? '[Quảng cáo ẩn trên Web]' : '[Quảng cáo ẩn trên Expo Go]'}
+                </Text>
+            </View>
+        );
+    }
+
     const bannerAdUnitId = __DEV__
         ? TestIds.BANNER
         : Platform.select({
