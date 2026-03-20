@@ -1,5 +1,3 @@
-// Mỗi khối hình là một mảng 2 chiều gồm các số 0 và 1.
-// Chúng ta cũng gắn cho chúng một màu sắc hoặc ID duy nhất để vẽ lên màn hình sau này.
 export const SHAPES = [
   { id: 'dot', color: '#FF5722', blocks: [[1]] },
   { id: 'square-2', color: '#FFEB3B', blocks: [[1, 1], [1, 1]] },
@@ -47,7 +45,7 @@ export const canPlaceShape = (board, shape, startRow, startCol, boardSize = 8) =
 export const placeShape = (board, shape, startRow, startCol) => {
   const newBoard = board.map((row) => [...row]);
   const blocks = shape.blocks;
-  
+
   for (let r = 0; r < blocks.length; r++) {
     for (let c = 0; c < blocks[r].length; c++) {
       if (blocks[r][c] === 1) {
@@ -83,7 +81,7 @@ export const checkAndClearLines = (board, boardSize = 8) => {
   for (const r of rowsToClear) {
     for (let c = 0; c < boardSize; c++) {
       newBoard[r][c] = '0';
-      clearingCells.push({r, c});
+      clearingCells.push({ r, c });
     }
   }
 
@@ -91,7 +89,7 @@ export const checkAndClearLines = (board, boardSize = 8) => {
     for (let r = 0; r < boardSize; r++) {
       newBoard[r][c] = '0';
       if (!clearingCells.some(cell => cell.r === r && cell.c === c)) {
-        clearingCells.push({r, c});
+        clearingCells.push({ r, c });
       }
     }
   }
@@ -123,9 +121,9 @@ export const getRandomShapes = (count = 3) => {
   const selected = [];
   for (let i = 0; i < count; i++) {
     const randomIndex = Math.floor(Math.random() * SHAPES.length);
-    selected.push({ 
-      ...SHAPES[randomIndex], 
-      uid: Math.random().toString(36).substring(2, 11) 
+    selected.push({
+      ...SHAPES[randomIndex],
+      uid: Math.random().toString(36).substring(2, 11)
     });
   }
   return selected;
