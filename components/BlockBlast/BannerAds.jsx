@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
+import { AudioContext } from '../../app/(tabs)/index';
 
 let BannerAd, BannerAdSize, TestIds;
 const isWeb = Platform.OS === 'web';
@@ -18,6 +19,9 @@ if (!isWeb && !isExpoGo) {
 const BannerAds = () => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [errorMessage, setErrorMessage] = useState(null);
+    const { adsRemoved } = useContext(AudioContext);
+
+    if (adsRemoved) return null;
 
     if (isWeb || isExpoGo) {
         return (

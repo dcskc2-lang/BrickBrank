@@ -1,6 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function SettingsModal({ visible, onClose, soundEnabled, toggleSound }) {
   return (
@@ -15,6 +14,10 @@ export default function SettingsModal({ visible, onClose, soundEnabled, toggleSo
               <Text style={styles.toggleText}>{soundEnabled ? 'BẬT' : 'TẮT'}</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity style={styles.contactBtn} onPress={() => Linking.openURL('https://www.facebook.com/unitednations/')}>
+            <Text style={styles.contactBtnText}>📞 Liên Hệ Hỗ Trợ Lỗi</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>Đóng</Text>
@@ -35,5 +38,7 @@ const styles = StyleSheet.create({
   settingText: { color: '#fff', fontSize: 18 },
   toggleOn: { backgroundColor: '#10b981', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
   toggleOff: { backgroundColor: '#ef4444', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
-  toggleText: { color: '#fff', fontWeight: 'bold' }
+  toggleText: { color: '#fff', fontWeight: 'bold' },
+  contactBtn: { marginTop: 15, width: '100%', backgroundColor: '#0284c7', padding: 15, borderRadius: 10, alignItems: 'center' },
+  contactBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });

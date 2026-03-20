@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useState, useContext } from 'react';
+import { useCallback, useState, useContext, useEffect } from 'react';
 import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import { AudioContext } from '../app/(tabs)/index';
@@ -33,6 +33,24 @@ export default function GamePlay({ route, navigation }) {
   const [gridPos, setGridPos] = useState({ pageX: 0, pageY: 0, width: 0, height: 0 });
   const [hoverState, setHoverState] = useState(null);
   const [playerName, setPlayerName] = useState('');
+  const [bestScore, setBestScore] = useState(0);
+
+  useEffect(() => {
+    const fetchBestScore = async () => {
+      try {
+        const storedScores = await AsyncStorage.getItem('highScores');
+        if (storedScores) {
+          const scoresArray = JSON.parse(storedScores);
+          // Lọc rà soát điểm cao nhất của đúng mode hiện tại (vd 8x8)
+          const currentModeScores = scoresArray.filter(s => s.mode === `${boardSize}x${boardSize}`);
+          if (currentModeScores.length > 0) {
+            setBestScore(currentModeScores[0].score);
+          }
+        }
+      } catch (e) { console.log(e); }
+    };
+    fetchBestScore();
+  }, [boardSize]);
 
   const onGridLayout = (x, y, w, h, pageX, pageY) => {
     setGridPos({ pageX, pageY, width: w, height: h });
@@ -180,7 +198,11 @@ export default function GamePlay({ route, navigation }) {
       </TouchableOpacity>
 
       <Text style={styles.title}>BLOCK BLAST</Text>
-      <Text style={styles.scoreText}>Điểm: {score}</Text>
+      
+      <View style={styles.scoreBoard}>
+        <Text style={styles.scoreText}>Điểm: {score}</Text>
+        <Text style={styles.bestScoreText}>👑 Kỷ lục: {Math.max(score, bestScore)}</Text>
+      </View>
 
       <View style={styles.boardContainer}>
         <Grid board={board} onGridLayout={onGridLayout} hoverState={hoverState} cellSize={CELL_SIZE} clearingCells={clearingCells} />
@@ -223,7 +245,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1e272e', justifyContent: 'center', alignItems: 'center' },
   topLeftBtn: { position: 'absolute', top: 50, left: 20, width: 45, height: 45, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 25, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#00BCD4', marginBottom: 5 },
-  scoreText: { fontSize: 50, fontWeight: 'bold', color: '#fff', marginBottom: 20 },
+  scoreBoard: { alignItems: 'center', marginBottom: 15 },
+  scoreText: { fontSize: 50, fontWeight: 'bold', color: '#fff' },
+  bestScoreText: { fontSize: 18, fontWeight: 'bold', color: '#f59e0b', marginTop: 5, letterSpacing: 1 },
   boardContainer: { marginVertical: 10, position: 'relative', backgroundColor: '#2C3A47', padding: 8, borderRadius: 10, elevation: 5 },
   shapesContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 150, marginTop: 30, paddingHorizontal: 10 },
   shapeSlot: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }
