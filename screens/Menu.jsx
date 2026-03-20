@@ -4,9 +4,10 @@ import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from
 import Animated, { FadeInRight, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { AudioContext } from '../app/(tabs)/index';
 import BannerAds from '../components/BlockBlast/BannerAds';
-import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
 import SelectModeModal from '../components/BlockBlast/Modals/SelectModeModal';
 import SettingsModal from '../components/BlockBlast/Modals/SettingsModal';
+import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
+import AboutUsModal from '../components/BlockBlast/Modals/AboutUsModal';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -14,6 +15,7 @@ export default function Menu({ navigation }) {
   const [isSelectModalVisible, setSelectModalVisible] = useState(false);
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
   const [isScoreModalVisible, setScoreModalVisible] = useState(false);
+  const [isAboutModalVisible, setAboutModalVisible] = useState(false);
 
   const { soundEnabled, toggleSound } = useContext(AudioContext);
   const [highScores, setHighScores] = useState([]);
@@ -91,12 +93,17 @@ export default function Menu({ navigation }) {
       <View style={styles.darkOverlay}>
         {/* Nút Bảng Xếp Hạng góc phải trên cùng */}
         <TouchableOpacity style={styles.topRightBtn} onPress={openScoreBoard}>
-          {/*source ảnh */}
+          {/* Để trống source ảnh theo yêu cầu */}
           <Image
             source={{ uri: '' }}
             style={styles.leaderboardIcon}
           />
           <Text style={styles.iconFallbackText}>🏆</Text>
+        </TouchableOpacity>
+
+        {/* Nút About Us góc dưới phải */}
+        <TouchableOpacity style={styles.bottomRightBtn} onPress={() => setAboutModalVisible(true)}>
+          <Text style={styles.iconFallbackText}>ℹ️</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>BRICK BRACK</Text>
@@ -142,6 +149,11 @@ export default function Menu({ navigation }) {
           renderScoreItem={renderScoreItem}
         />
 
+        <AboutUsModal
+          visible={isAboutModalVisible}
+          onClose={() => setAboutModalVisible(false)}
+        />
+
       </View>
     </ImageBackground>
   );
@@ -175,6 +187,18 @@ const styles = StyleSheet.create({
   topRightBtn: {
     position: 'absolute',
     top: 50,
+    right: 20,
+    width: 50,
+    height: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10
+  },
+  bottomRightBtn: {
+    position: 'absolute',
+    bottom: 90,
     right: 20,
     width: 50,
     height: 50,
