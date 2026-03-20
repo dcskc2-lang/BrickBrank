@@ -84,8 +84,6 @@ export default function Menu({ navigation }) {
 
   return (
     <ImageBackground
-      // 1. Nếu xài ảnh tải từ máy, thay thế cụm `source={{...}}` thành: source={require('../assets/ten-hinh-cua-ban.jpg')}
-      // 2. Thuộc tính resizeMode="cover" ở bên dưới chính là "Chìa khóa" giúp ảnh Zoom tỷ lệ chuẩn mà không bị kéo giãn méo mặt!
       source={{ uri: 'https://media.discordapp.net/attachments/1478592050587893942/1484265800356466769/AOI_d_955wRCJmah7aZjIO_uTuhYswIWK6npfQqOFTRx3JNVLKp4bZzwQiFt9aOVmcNrQrdmvt6ipzphEbakUSoIAEhfsCj_dy_Pa6fsjTVvVhOmN2lYn8ZOLRR4ENNNDTRDho8Z0b8JtxqG8vUlTVD2lNtCB6uqRX_3Jh6SSHfX8KZlbof0jws1600-rj.png?ex=69bd99bf&is=69bc483f&hm=f551c84acbb4f7a8d3a22e5e73ed737b765a453abe8d9439060979a34117b6a8&=&format=webp&quality=lossless&width=1466&height=800' }}
       style={styles.container}
       resizeMode="cover"
@@ -93,7 +91,7 @@ export default function Menu({ navigation }) {
       <View style={styles.darkOverlay}>
         {/* Nút Bảng Xếp Hạng góc phải trên cùng */}
         <TouchableOpacity style={styles.topRightBtn} onPress={openScoreBoard}>
-          {/* Để trống source ảnh theo yêu cầu */}
+          {/*source ảnh */}
           <Image
             source={{ uri: '' }}
             style={styles.leaderboardIcon}
@@ -155,7 +153,7 @@ const styles = StyleSheet.create({
   },
   darkOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)', // Sương trần màu đen mờ giúp nổi bật chữ
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
   },
   title: {
     fontSize: 48,
