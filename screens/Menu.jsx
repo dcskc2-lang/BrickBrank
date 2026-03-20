@@ -51,7 +51,7 @@ export default function Menu({ navigation }) {
     if (adsRemoved) {
       Alert.alert(
         "Chế độ Thử nghiệm",
-        "Bạn đã tắt Quảng Cáo vĩnh viễn.\n\nNhưng có vẻ bạn đang muốn phục hồi Demo Quảng cáo cho báo cáo điểm?",
+        "Bạn đã tắt Quảng Cáo vĩnh viễn.",
         [
           { text: "Đóng", style: "cancel" },
           { text: "Bật Lại Quảng Cáo", onPress: () => restoreAds() }
