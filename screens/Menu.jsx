@@ -1,13 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useContext, useEffect, useState } from 'react';
-import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { AudioContext } from '../app/(tabs)/index';
 import BannerAds from '../components/BlockBlast/BannerAds';
+import AboutUsModal from '../components/BlockBlast/Modals/AboutUsModal';
+import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
 import SelectModeModal from '../components/BlockBlast/Modals/SelectModeModal';
 import SettingsModal from '../components/BlockBlast/Modals/SettingsModal';
-import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
-import AboutUsModal from '../components/BlockBlast/Modals/AboutUsModal';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -17,7 +17,7 @@ export default function Menu({ navigation }) {
   const [isScoreModalVisible, setScoreModalVisible] = useState(false);
   const [isAboutModalVisible, setAboutModalVisible] = useState(false);
 
-  const { soundEnabled, toggleSound } = useContext(AudioContext);
+  const { soundEnabled, toggleSound, adsRemoved, removeAds, restoreAds } = useContext(AudioContext);
   const [highScores, setHighScores] = useState([]);
 
   const pulseScale = useSharedValue(1);
@@ -45,6 +45,28 @@ export default function Menu({ navigation }) {
       await AsyncStorage.removeItem('highScores');
       setHighScores([]);
     } catch (e) { console.log(e); }
+  };
+
+  const handleBuyAds = () => {
+    if (adsRemoved) {
+      Alert.alert(
+        "Chế độ Thử nghiệm",
+        "Bạn đã tắt Quảng Cáo vĩnh viễn.\n\nNhưng có vẻ bạn đang muốn phục hồi Demo Quảng cáo cho báo cáo điểm?",
+        [
+          { text: "Đóng", style: "cancel" },
+          { text: "Bật Lại Quảng Cáo", onPress: () => restoreAds() }
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Cửa hàng",
+        "Gói Tắt Quảng Cáo trọn đời.\n\n 0 VNĐ ",
+        [
+          { text: "Bỏ qua", style: "cancel" },
+          { text: "Mua (0đ)", onPress: () => removeAds() }
+        ]
+      );
+    }
   };
 
   const playMode = (size) => {
@@ -91,6 +113,11 @@ export default function Menu({ navigation }) {
       resizeMode="cover"
     >
       <View style={styles.darkOverlay}>
+        {/* Nút Giỏ Hàng góc trái trên cùng */}
+        <TouchableOpacity style={styles.topLeftBtn} onPress={handleBuyAds}>
+          <Text style={styles.iconFallbackText}>🛒</Text>
+        </TouchableOpacity>
+
         {/* Nút Bảng Xếp Hạng góc phải trên cùng */}
         <TouchableOpacity style={styles.topRightBtn} onPress={openScoreBoard}>
           {/* Để trống source ảnh theo yêu cầu */}
@@ -183,6 +210,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 60,
+  },
+  topLeftBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 50,
+    height: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10
   },
   topRightBtn: {
     position: 'absolute',

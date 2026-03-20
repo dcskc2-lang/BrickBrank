@@ -9,17 +9,24 @@ import Menu from "../../screens/Menu";
 export const AudioContext = createContext({
   soundEnabled: true,
   toggleSound: async () => {},
+  adsRemoved: false,
+  removeAds: async () => {},
+  restoreAds: async () => {}
 });
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [adsRemoved, setAdsRemoved] = useState(false);
   const soundRef = useRef(null);
 
   useEffect(() => {
     AsyncStorage.getItem("soundEnabled").then((val) => {
       setSoundEnabled(val !== "false");
+    });
+    AsyncStorage.getItem("adsRemoved").then((val) => {
+      setAdsRemoved(val === "true");
     });
   }, []);
 
@@ -55,8 +62,18 @@ export default function App() {
     await AsyncStorage.setItem("soundEnabled", newVal.toString());
   };
 
+  const removeAds = async () => {
+    setAdsRemoved(true);
+    await AsyncStorage.setItem("adsRemoved", "true");
+  };
+
+  const restoreAds = async () => {
+    setAdsRemoved(false);
+    await AsyncStorage.setItem("adsRemoved", "false");
+  };
+
   return (
-    <AudioContext.Provider value={{ soundEnabled, toggleSound }}>
+    <AudioContext.Provider value={{ soundEnabled, toggleSound, adsRemoved, removeAds, restoreAds }}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Stack.Navigator initialRouteName="Menu">
           <Stack.Screen
