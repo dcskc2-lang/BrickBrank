@@ -1,15 +1,14 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  runOnJS
+  withSpring
 } from 'react-native-reanimated';
 
 const DRAG_CELL_SIZE = 30;
-// Khoảng cách đẩy khối hình lên cao (tránh ngón tay che khuất)
 const FINGER_OFFSET_Y = 100;
 
 export const DraggableShape = ({ shape, onDrop, onDrag, onDragEnd }) => {
@@ -18,7 +17,6 @@ export const DraggableShape = ({ shape, onDrop, onDrag, onDragEnd }) => {
   const scale = useSharedValue(1);
   const zIndex = useSharedValue(0);
 
-  // Quan trọng: Reset toạ độ khi shape thay đổi! (Sửa lỗi spawn block dính luôn trên màn hình)
   useEffect(() => {
     translateX.value = 0;
     translateY.value = 0;
@@ -39,7 +37,6 @@ export const DraggableShape = ({ shape, onDrop, onDrag, onDragEnd }) => {
     if (!shape) return;
     const success = onDrop(shape, endX, endY);
     if (!success) {
-      // Nếu đặt lỗi, nảy về vị trí cũ
       translateX.value = withSpring(0);
       translateY.value = withSpring(0);
       scale.value = withSpring(1);
@@ -50,30 +47,27 @@ export const DraggableShape = ({ shape, onDrop, onDrag, onDragEnd }) => {
   const panGesture = Gesture.Pan()
     .onBegin(() => {
       zIndex.value = 1000;
-      scale.value = withSpring(1.5); 
+      scale.value = withSpring(1.5);
     })
     .onChange((event) => {
       translateX.value += event.changeX;
       translateY.value += event.changeY;
-      // Trừ đi FINGER_OFFSET_Y để logic game nhận diện tâm khối hình nằm TÍT BÊN TRÊN ngón tay
       runOnJS(handleDragJS)(event.absoluteX, event.absoluteY - FINGER_OFFSET_Y);
     })
     .onEnd((event) => {
       runOnJS(handleDropJS)(event.absoluteX, event.absoluteY - FINGER_OFFSET_Y);
     })
     .onFinalize(() => {
-      // Khi kết thúc thao tác kéo (cho dù drop thành công hay không), cũng làm sạch Ghost Preview
       runOnJS(handleDragEndJS)();
     });
 
   const animatedStyle = useAnimatedStyle(() => {
-    // Khi cầm khối lên (scale thay đổi từ 1 -> 1.5), ta đẩy hình nhảy lên cao
     const pickUpOffset = -FINGER_OFFSET_Y * 2 * (scale.value - 1);
 
     return {
       transform: [
         { translateX: translateX.value },
-        { translateY: translateY.value + pickUpOffset }, 
+        { translateY: translateY.value + pickUpOffset },
         { scale: scale.value }
       ],
       zIndex: zIndex.value,
