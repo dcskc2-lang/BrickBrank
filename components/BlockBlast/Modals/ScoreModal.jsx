@@ -8,7 +8,7 @@ export default function ScoreModal({ visible, onClose, highScores, clearScores, 
       <BlurView intensity={70} tint="dark" style={styles.modalOverlay}>
         <View style={styles.modalContentScore}>
           <Text style={styles.modalTitle}>BẢNG ĐIỂM</Text>
-          {/* Nút xoá lịch sử */}
+
           <TouchableOpacity style={styles.clearBtn} onPress={clearScores}>
             <Text style={styles.clearBtnText}>Xóa Lịch Sử</Text>
           </TouchableOpacity>
