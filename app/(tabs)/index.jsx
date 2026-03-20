@@ -1,14 +1,14 @@
-import React, { createContext, useState, useEffect, useRef } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import GamePlay from '../../screens/GamePlay';
-import Menu from '../../screens/Menu';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Audio } from "expo-av";
+import { createContext, useEffect, useRef, useState } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import GamePlay from "../../screens/GamePlay";
+import Menu from "../../screens/Menu";
 
 export const AudioContext = createContext({
   soundEnabled: true,
-  toggleSound: async () => {}
+  toggleSound: async () => {},
 });
 
 const Stack = createNativeStackNavigator();
@@ -18,8 +18,8 @@ export default function App() {
   const soundRef = useRef(null);
 
   useEffect(() => {
-    AsyncStorage.getItem('soundEnabled').then(val => {
-      setSoundEnabled(val !== 'false');
+    AsyncStorage.getItem("soundEnabled").then((val) => {
+      setSoundEnabled(val !== "false");
     });
   }, []);
 
@@ -29,14 +29,16 @@ export default function App() {
         if (!soundRef.current) {
           try {
             const { sound } = await Audio.Sound.createAsync(
-              require('../../assets/bgm.mp3')
+              require("../../assets/bgm.mp3"),
             );
             soundRef.current = sound;
             await sound.setIsLoopingAsync(true);
             await sound.playAsync();
-          } catch(e) { console.log('Global Audio init error', e); }
+          } catch (e) {
+            console.log("Global Audio init error", e);
+          }
         } else {
-            await soundRef.current.playAsync();
+          await soundRef.current.playAsync();
         }
       } else {
         if (soundRef.current) {
@@ -50,7 +52,7 @@ export default function App() {
   const toggleSound = async () => {
     const newVal = !soundEnabled;
     setSoundEnabled(newVal);
-    await AsyncStorage.setItem('soundEnabled', newVal.toString());
+    await AsyncStorage.setItem("soundEnabled", newVal.toString());
   };
 
   return (
