@@ -14,6 +14,7 @@ import {
   placeShape
 } from '../components/BlockBlast/GameLogic';
 import { Grid } from '../components/BlockBlast/Grid';
+import BannerAds from '../components/BlockBlast/BannerAds';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -213,7 +214,7 @@ export default function GamePlay({ route, navigation }) {
         soundEnabled={soundEnabled} 
         toggleSound={toggleSound} 
       />
-
+      <BannerAds />
     </SafeAreaView>
   );
 }
