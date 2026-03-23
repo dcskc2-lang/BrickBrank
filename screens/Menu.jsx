@@ -3,6 +3,8 @@ import { useContext, useEffect, useState } from 'react';
 import { Alert, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { AudioContext } from '../app/(tabs)/index';
+import { db } from '../firebaseconfig';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import BannerAds from '../components/BlockBlast/BannerAds';
 import AboutUsModal from '../components/BlockBlast/Modals/AboutUsModal';
 import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
@@ -32,19 +34,19 @@ export default function Menu({ navigation }) {
 
   const openScoreBoard = async () => {
     try {
-      const data = await AsyncStorage.getItem('highScores');
-      if (data) {
-        setHighScores(JSON.parse(data));
-      }
+      const q = query(
+        collection(db, 'highScores'),
+        orderBy('score', 'desc'),
+        limit(50)
+      );
+      const querySnapshot = await getDocs(q);
+      const scores = [];
+      querySnapshot.forEach((doc) => {
+        scores.push(doc.data());
+      });
+      setHighScores(scores);
     } catch (e) { console.log(e); }
     setScoreModalVisible(true);
-  };
-
-  const clearScores = async () => {
-    try {
-      await AsyncStorage.removeItem('highScores');
-      setHighScores([]);
-    } catch (e) { console.log(e); }
   };
 
   const handleBuyAds = () => {
@@ -172,7 +174,6 @@ export default function Menu({ navigation }) {
           visible={isScoreModalVisible}
           onClose={() => setScoreModalVisible(false)}
           highScores={highScores}
-          clearScores={clearScores}
           renderScoreItem={renderScoreItem}
         />
 

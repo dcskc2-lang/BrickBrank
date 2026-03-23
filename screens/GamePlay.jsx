@@ -3,6 +3,8 @@ import { useCallback, useState, useContext, useEffect } from 'react';
 import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import { AudioContext } from '../app/(tabs)/index';
+import { db } from '../firebaseconfig';
+import { collection, addDoc, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import PauseModal from '../components/BlockBlast/Modals/PauseModal';
 import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
 import {
@@ -38,14 +40,16 @@ export default function GamePlay({ route, navigation }) {
   useEffect(() => {
     const fetchBestScore = async () => {
       try {
-        const storedScores = await AsyncStorage.getItem('highScores');
-        if (storedScores) {
-          const scoresArray = JSON.parse(storedScores);
-          // Lọc rà soát điểm cao nhất của đúng mode hiện tại (vd 8x8)
-          const currentModeScores = scoresArray.filter(s => s.mode === `${boardSize}x${boardSize}`);
-          if (currentModeScores.length > 0) {
-            setBestScore(currentModeScores[0].score);
-          }
+        const q = query(
+          collection(db, 'highScores'),
+          where('mode', '==', `${boardSize}x${boardSize}`),
+          orderBy('score', 'desc'),
+          limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const topDoc = querySnapshot.docs[0];
+          setBestScore(topDoc.data().score);
         }
       } catch (e) { console.log(e); }
     };
@@ -171,16 +175,12 @@ export default function GamePlay({ route, navigation }) {
   const saveScoreAndExit = async () => {
     try {
       if (playerName.trim() !== '') {
-        const storedScores = await AsyncStorage.getItem('highScores');
-        const scoresArray = storedScores ? JSON.parse(storedScores) : [];
-        scoresArray.push({
+        await addDoc(collection(db, 'highScores'), {
           name: playerName,
           score: score,
           mode: `${boardSize}x${boardSize}`,
           date: new Date().toISOString()
         });
-        scoresArray.sort((a, b) => b.score - a.score);
-        await AsyncStorage.setItem('highScores', JSON.stringify(scoresArray));
       }
     } catch (e) { console.log(e); }
     navigation.navigate('Menu');
