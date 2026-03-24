@@ -20,7 +20,8 @@ export default function Menu({ navigation }) {
   const [isAboutModalVisible, setAboutModalVisible] = useState(false);
 
   const { soundEnabled, toggleSound, adsRemoved, removeAds, restoreAds } = useContext(AudioContext);
-  const [highScores, setHighScores] = useState([]);
+  const [localScores, setLocalScores] = useState([]);
+  const [worldScores, setWorldScores] = useState([]);
 
   const pulseScale = useSharedValue(1);
 
@@ -34,17 +35,24 @@ export default function Menu({ navigation }) {
 
   const openScoreBoard = async () => {
     try {
+      const localData = await AsyncStorage.getItem('localScores');
+      if (localData) {
+        setLocalScores(JSON.parse(localData));
+      } else {
+        setLocalScores([]);
+      }
+
       const q = query(
-        collection(db, 'highScores'),
+        collection(db, 'worldLeaderboard'),
         orderBy('score', 'desc'),
-        limit(50)
+        limit(10)
       );
       const querySnapshot = await getDocs(q);
-      const scores = [];
+      const wScores = [];
       querySnapshot.forEach((doc) => {
-        scores.push(doc.data());
+        wScores.push(doc.data());
       });
-      setHighScores(scores);
+      setWorldScores(wScores);
     } catch (e) { console.log(e); }
     setScoreModalVisible(true);
   };
@@ -173,7 +181,8 @@ export default function Menu({ navigation }) {
         <ScoreModal
           visible={isScoreModalVisible}
           onClose={() => setScoreModalVisible(false)}
-          highScores={highScores}
+          localScores={localScores}
+          worldScores={worldScores}
           renderScoreItem={renderScoreItem}
         />
 

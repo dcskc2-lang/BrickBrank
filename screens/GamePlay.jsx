@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useState, useContext, useEffect } from 'react';
+import React, { useCallback, useState, useContext, useEffect } from 'react';
 import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import { AudioContext } from '../app/(tabs)/index';
 import { db } from '../firebaseconfig';
-import { collection, addDoc, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import PauseModal from '../components/BlockBlast/Modals/PauseModal';
 import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
 import {
@@ -40,16 +40,13 @@ export default function GamePlay({ route, navigation }) {
   useEffect(() => {
     const fetchBestScore = async () => {
       try {
-        const q = query(
-          collection(db, 'highScores'),
-          where('mode', '==', `${boardSize}x${boardSize}`),
-          orderBy('score', 'desc'),
-          limit(1)
-        );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const topDoc = querySnapshot.docs[0];
-          setBestScore(topDoc.data().score);
+        const localData = await AsyncStorage.getItem('localScores');
+        if (localData) {
+          const scoresArray = JSON.parse(localData);
+          const currentModeScores = scoresArray.filter(s => s.mode === `${boardSize}x${boardSize}`);
+          if (currentModeScores.length > 0) {
+            setBestScore(currentModeScores[0].score);
+          }
         }
       } catch (e) { console.log(e); }
     };
@@ -172,15 +169,43 @@ export default function GamePlay({ route, navigation }) {
     return false;
   }, [board, availableShapes, gridPos, isGameOver, isPauseModalVisible, isAnimating, boardSize, CELL_SIZE]);
 
+  const isSavingRef = React.useRef(false);
+
   const saveScoreAndExit = async () => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     try {
       if (playerName.trim() !== '') {
-        await addDoc(collection(db, 'highScores'), {
+        const newScoreObj = {
           name: playerName,
           score: score,
           mode: `${boardSize}x${boardSize}`,
           date: new Date().toISOString()
-        });
+        };
+
+        const localData = await AsyncStorage.getItem('localScores');
+        const scoresArray = localData ? JSON.parse(localData) : [];
+        scoresArray.push(newScoreObj);
+        scoresArray.sort((a, b) => b.score - a.score);
+        const top10Local = scoresArray.slice(0, 10);
+        await AsyncStorage.setItem('localScores', JSON.stringify(top10Local));
+
+        let deviceId = await AsyncStorage.getItem('deviceId');
+        if (!deviceId) {
+          deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          await AsyncStorage.setItem('deviceId', deviceId);
+        }
+
+        const docRef = doc(db, 'worldLeaderboard', deviceId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (score > data.score) {
+            await setDoc(docRef, newScoreObj, { merge: true });
+          }
+        } else {
+          await setDoc(docRef, newScoreObj);
+        }
       }
     } catch (e) { console.log(e); }
     navigation.navigate('Menu');
