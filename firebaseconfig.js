@@ -27,5 +27,8 @@ isSupported().then((supported) => {
 });
 
 import { getFirestore } from "firebase/firestore";
-export const db = getFirestore(app); // Để dành cho việc lưu điểm sau này
-export default app; // QUAN TRỌNG: Phải có dòng này để file khác gọi được 'app'
+import { getAuth } from "firebase/auth";
+
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+export default app;

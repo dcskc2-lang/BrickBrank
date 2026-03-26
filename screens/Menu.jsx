@@ -1,15 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import { useContext, useEffect, useState } from 'react';
 import { Alert, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { AudioContext } from '../app/(tabs)/index';
-import { db } from '../firebaseconfig';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import BannerAds from '../components/BlockBlast/BannerAds';
 import AboutUsModal from '../components/BlockBlast/Modals/AboutUsModal';
+import LoginModal from '../components/BlockBlast/Modals/LoginModal';
 import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
 import SelectModeModal from '../components/BlockBlast/Modals/SelectModeModal';
 import SettingsModal from '../components/BlockBlast/Modals/SettingsModal';
+import EditProfileModal from '../components/BlockBlast/Modals/EditProfileModal';
+import { db, auth } from '../firebaseconfig';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -18,10 +22,40 @@ export default function Menu({ navigation }) {
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
   const [isScoreModalVisible, setScoreModalVisible] = useState(false);
   const [isAboutModalVisible, setAboutModalVisible] = useState(false);
+  const [isEditProfileModalVisible, setEditProfileModalVisible] = useState(false);
 
-  const { soundEnabled, toggleSound, adsRemoved, removeAds, restoreAds } = useContext(AudioContext);
+  const { adsRemoved, restoreAds, soundEnabled, toggleSound, setIsLoggedInState, setUserProfileState } = useContext(AudioContext);
+  const authContext = useContext(AudioContext);
   const [localScores, setLocalScores] = useState([]);
   const [worldScores, setWorldScores] = useState([]);
+  const isLoggedIn = authContext.isLoggedIn || false;
+  const userProfile = authContext.userProfile || { name: 'PixelMaster', level: 1, highScore: 0 };
+  const currencies = authContext.currencies || { gold: 0 };
+  const quests = authContext.quests || { gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0 };
+
+  const [isProfileExpanded, setIsProfileExpanded] = useState(false);
+  const [isLoginModalVisible, setLoginModalVisible] = useState(false);
+
+  const handleLogin = () => {
+    setLoginModalVisible(true);
+  };
+
+  const handleLoginSuccess = (profileName) => {
+    // Left empty since onAuthStateChanged handles real state now
+    setLoginModalVisible(false);
+  };
+
+  const handleLogout = async () => {
+    if (auth.currentUser) {
+      await signOut(auth);
+    } else {
+      setIsLoggedInState(false);
+      setUserProfileState(null);
+    }
+    setIsProfileExpanded(false);
+  };
+
+  const toggleProfile = () => setIsProfileExpanded(!isProfileExpanded);
 
   const pulseScale = useSharedValue(1);
 
@@ -118,51 +152,172 @@ export default function Menu({ navigation }) {
 
   return (
     <ImageBackground
-      source={{ uri: 'https://media.discordapp.net/attachments/1478592050587893942/1484265800356466769/AOI_d_955wRCJmah7aZjIO_uTuhYswIWK6npfQqOFTRx3JNVLKp4bZzwQiFt9aOVmcNrQrdmvt6ipzphEbakUSoIAEhfsCj_dy_Pa6fsjTVvVhOmN2lYn8ZOLRR4ENNNDTRDho8Z0b8JtxqG8vUlTVD2lNtCB6uqRX_3Jh6SSHfX8KZlbof0jws1600-rj.png?ex=69bd99bf&is=69bc483f&hm=f551c84acbb4f7a8d3a22e5e73ed737b765a453abe8d9439060979a34117b6a8&=&format=webp&quality=lossless&width=1466&height=800' }}
+      source={{ uri: 'https://media.discordapp.net/attachments/1478592050587893942/1484265800356466769/AOI_d_955wRCJmah7aZjIO_uTuhYswIWK6npfQqOFTRx3JNVLKp4bZzwQiFt9aOVmcNrQrdmvt6ipzphEbakUSoIAEhfsCj_dy_Pa6fsjTVvVhOmN2lYn8ZOLRR4ENNNDTRDho8Z0b8JtxqG8vUlTVD2lNtCB6uqRX_3Jh6SSH3X8KZlbof0jws1600-rj.png?ex=69bd99bf&is=69bc483f&hm=f551c84acbb4f7a8d3a22e5e73ed737b765a453abe8d9439060979a34117b6a8&=&format=webp&quality=lossless&width=1466&height=800' }}
       style={styles.container}
       resizeMode="cover"
     >
       <View style={styles.darkOverlay}>
-        {/* Nút Giỏ Hàng góc trái trên cùng */}
-        <TouchableOpacity style={styles.topLeftBtn} onPress={handleBuyAds}>
-          <Text style={styles.iconFallbackText}>🛒</Text>
-        </TouchableOpacity>
 
-        {/* Nút Bảng Xếp Hạng góc phải trên cùng */}
-        <TouchableOpacity style={styles.topRightBtn} onPress={openScoreBoard}>
-          {/* Để trống source ảnh theo yêu cầu */}
-          <Image
-            source={{ uri: '' }}
-            style={styles.leaderboardIcon}
-          />
-          <Text style={styles.iconFallbackText}>🏆</Text>
-        </TouchableOpacity>
+        {/* TOP BAR */}
+        <View style={styles.topBar}>
+          {/* Default Profile Toggle (Left) */}
+          {isLoggedIn ? (
+            <TouchableOpacity style={styles.profileContainer} onPress={toggleProfile} activeOpacity={0.8}>
+              <View style={styles.avatarPlaceholder}>
+                <Image source={{ uri: 'https://api.dicebear.com/7.x/pixel-art/png?seed=PixelMaster' }} style={styles.avatarImage} />
+              </View>
+              <Text style={styles.profileText}>
+                <Text style={styles.profileName}>{userProfile.name}</Text> | Cấp {userProfile.level} | High Score: {userProfile.highScore.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+              <Text style={styles.loginBtnText}>Đăng Nhập</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Action Buttons Right */}
+          <View style={styles.topRightActions}>
+            {/* Gold */}
+            <View style={styles.currencyBtnGold}>
+              <Text style={styles.iconFallbackText}></Text>
+              <Text style={styles.currencyTextGold}>VÀNG: {currencies.gold}</Text>
+            </View>
+
+            <TouchableOpacity style={styles.cartBtn} onPress={handleBuyAds}>
+              <Text style={styles.iconFallbackText}>🛒</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.rankBtn} onPress={openScoreBoard}>
+              <Text style={styles.iconFallbackText}>🏆</Text>
+              <Text style={styles.rankText}>RANK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* EXPANDED PROFILE PANEL */}
+        {isLoggedIn && isProfileExpanded && (
+          <View style={styles.expandedProfilePanel}>
+            <View style={styles.epTopRow}>
+              <View style={styles.epAvatarContainer}>
+                <Image source={{ uri: 'https://api.dicebear.com/7.x/pixel-art/png?seed=PixelMaster' }} style={styles.epAvatarImage} />
+              </View>
+              <View style={styles.epInfo}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={[styles.epName, { marginBottom: 0 }]}>{userProfile.name}</Text>
+                  <TouchableOpacity style={{ marginLeft: 10 }} onPress={() => setEditProfileModalVisible(true)}>
+                    <Text style={{ fontSize: 16 }}>✏️</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.epProgressContainer}>
+                  <LinearGradient
+                    colors={['#34d399', '#3b82f6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.epProgressBar, { width: `${Math.min(100, ((userProfile.exp || 0) / ((userProfile.level || 1) * 200)) * 100)}%` }]}
+                  />
+                </View>
+                <Text style={styles.epProgressText}>TIẾN TRÌNH CẤP {(userProfile.level || 1) + 1} ({userProfile.exp || 0}/{(userProfile.level || 1) * 200} XP)</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={{ marginTop: 15, backgroundColor: '#ef4444', padding: 10, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#fca5a5' }}
+              onPress={handleLogout}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>ĐĂNG XUẤT</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* --- NHIỆM VỤ HÀNG NGÀY (Phải) --- */}
+        <View style={styles.rightPanel}>
+          <Text style={styles.panelTitleDaily}>NHIỆM VỤ HÀNG NGÀY</Text>
+          <View style={styles.questRow}>
+            <View style={quests.gamesPlayed >= 2 ? styles.checkboxChecked : styles.checkboxEmpty}>
+              {quests.gamesPlayed >= 2 && <Text style={styles.checkMark}>✓</Text>}
+            </View>
+            <View>
+              <Text style={[styles.questText, quests.gamesPlayed >= 2 && {color: '#10b981'}]}>
+                 Chơi 2 Màn ({Math.min(quests.gamesPlayed, 2)}/2)
+              </Text>
+              <Text style={styles.rewardText}>🎁 50 Vàng - 🌟 50 XP</Text>
+            </View>
+          </View>
+          <View style={styles.questRow}>
+            <View style={quests.pointsReached >= 200 ? styles.checkboxChecked : styles.checkboxEmpty}>
+              {quests.pointsReached >= 200 && <Text style={styles.checkMark}>✓</Text>}
+            </View>
+            <View>
+              <Text style={[styles.questText, quests.pointsReached >= 200 && {color: '#10b981'}]}>
+                 Đạt 200 Điểm ({Math.min(quests.pointsReached, 200)}/200)
+              </Text>
+              <Text style={styles.rewardText}>🎁 100 Vàng - 🌟 100 XP</Text>
+            </View>
+          </View>
+          <View style={styles.questRow}>
+            <View style={quests.goldBlocksBroken >= 10 ? styles.checkboxChecked : styles.checkboxEmpty}>
+              {quests.goldBlocksBroken >= 10 && <Text style={styles.checkMark}>✓</Text>}
+            </View>
+            <View>
+              <Text style={[styles.questText, quests.goldBlocksBroken >= 10 && {color: '#10b981'}]}>
+                 Phá 10 Khối Vàng ({Math.min(quests.goldBlocksBroken, 10)}/10)
+              </Text>
+              <Text style={styles.rewardText}>🎁 150 Vàng - 🌟 150 XP</Text>
+            </View>
+          </View>
+        </View>
 
         {/* Nút About Us góc dưới phải */}
         <TouchableOpacity style={styles.bottomRightBtn} onPress={() => setAboutModalVisible(true)}>
           <Text style={styles.iconFallbackText}>ℹ️</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>BRICK BRACK</Text>
-
         <View style={styles.centerContainer}>
+          <Text style={styles.title}>BRICK BRACK</Text>
 
-          {/* Thanh Select */}
+          {/* CHƠI NGAY */}
+          <View style={styles.playBtnContainer}>
+            <TouchableOpacity
+              onPress={() => {
+                const sizes = [6, 7, 8, 9, 10];
+                const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
+                playMode(randomSize);
+              }}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#4facfe', '#a18cd1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.playNowBtn}
+              >
+                <Text style={styles.playNowText}>CHƠI NGAY</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* CHỌN MÀN CHƠI */}
           <AnimatedTouchableOpacity
-            style={[styles.mainBtn, { transform: [{ scale: pulseScale }] }]}
+            style={[styles.secondaryBtn, { transform: [{ scale: pulseScale }] }]}
             onPress={() => setSelectModalVisible(true)}
           >
-            <Text style={styles.mainBtnText}>Chọn Màn Chơi</Text>
+            <Text style={styles.secondaryBtnText}>CHỌN MÀN CHƠI</Text>
           </AnimatedTouchableOpacity>
 
-          {/* Thanh Cài đặt */}
-          <TouchableOpacity style={styles.mainBtn} onPress={() => setSettingsModalVisible(true)}>
-            <Text style={styles.mainBtnText}>Cài Đặt</Text>
+          {/* CÀI ĐẶT */}
+          <TouchableOpacity style={styles.secondaryBtn} onPress={() => setSettingsModalVisible(true)}>
+            <Text style={styles.secondaryBtnText}>CÀI ĐẶT</Text>
           </TouchableOpacity>
 
         </View>
 
         <BannerAds />
+
+        <LoginModal
+          visible={isLoginModalVisible}
+          onClose={() => setLoginModalVisible(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
 
         <SelectModeModal
           visible={isSelectModalVisible}
@@ -191,6 +346,13 @@ export default function Menu({ navigation }) {
           onClose={() => setAboutModalVisible(false)}
         />
 
+        <EditProfileModal
+          visible={isEditProfileModalVisible}
+          onClose={() => setEditProfileModalVisible(false)}
+          userProfile={userProfile}
+          setUserProfileState={setUserProfileState}
+        />
+
       </View>
     </ImageBackground>
   );
@@ -202,85 +364,177 @@ const styles = StyleSheet.create({
   },
   darkOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 50,
+    zIndex: 10,
+  },
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingRight: 15,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#4b5563',
+  },
+  avatarPlaceholder: {
+    width: 44,
+    height: 44,
+    backgroundColor: '#3b82f6',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+  },
+  profileName: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  loginBtn: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+  },
+  loginBtnText: {
+    color: '#60a5fa',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  topRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cartBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(30,30,30,0.8)',
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  rankBtn: {
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(30,30,30,0.8)',
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  rankText: {
+    color: '#fcd34d',
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontSize: 16,
+  },
+  bottomRightBtn: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10
+  },
+  iconFallbackText: {
+    fontSize: 20
   },
   title: {
-    fontSize: 48,
+    fontSize: 52,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginTop: 100,
+    marginBottom: 50,
     fontWeight: '900',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(255, 255, 255, 0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    letterSpacing: 2,
+    textShadowColor: '#4ea8de',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 60,
+    paddingTop: 40,
   },
-  topLeftBtn: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 25,
-    justifyContent: 'center',
+  playBtnContainer: {
+    shadowColor: '#b5179e',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 15,
+    marginBottom: 30,
+    width: '60%',
+    maxWidth: 350,
+    borderRadius: 15,
+  },
+  playNowBtn: {
+    paddingVertical: 18,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     alignItems: 'center',
-    zIndex: 10
   },
-  topRightBtn: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10
-  },
-  bottomRightBtn: {
-    position: 'absolute',
-    bottom: 90,
-    right: 20,
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10
-  },
-  leaderboardIcon: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute'
-  },
-  iconFallbackText: {
-    fontSize: 24
-  },
-  mainBtn: {
-    width: '70%',
-    backgroundColor: '#3b82f6',
-    paddingVertical: 15,
-    borderRadius: 30,
-    marginBottom: 20,
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  mainBtnText: {
+  playNowText: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 24,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  secondaryBtn: {
+    width: '60%',
+    maxWidth: 350,
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    borderRadius: 30,
+    marginBottom: 15,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#93c5fd',
+    shadowColor: '#60a5fa',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  secondaryBtnText: {
+    color: '#ffffff',
+    fontSize: 18,
     fontWeight: 'bold',
     textTransform: 'uppercase'
   },
@@ -314,5 +568,236 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontSize: 24,
     fontWeight: '900'
+  },
+  currencyBtnGold: {
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(30,30,30,0.8)',
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginRight: 15,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  currencyBtnDiamond: {
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(30,30,30,0.8)',
+    borderWidth: 2,
+    borderColor: '#38bdf8',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginRight: 15,
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  currencyTextGold: {
+    color: '#fcd34d',
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  currencyTextDiamond: {
+    color: '#7dd3fc',
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  expandedProfilePanel: {
+    position: 'absolute',
+    top: 110,
+    left: 20,
+    backgroundColor: 'rgba(30,30,30,0.85)',
+    padding: 15,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#a855f7',
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 10,
+    zIndex: 20,
+    width: 320,
+  },
+  epTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  epAvatarContainer: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#3b82f6',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#334155'
+  },
+  epAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  epInfo: {
+    flex: 1,
+  },
+  epName: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  epProgressContainer: {
+    height: 12,
+    backgroundColor: '#1e293b',
+    borderRadius: 6,
+    overflow: 'hidden',
+    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+  },
+  epProgressBar: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  epProgressText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  leftPanel: {
+    position: 'absolute',
+    top: 250,
+    left: 20,
+    backgroundColor: 'rgba(15,23,42,0.8)',
+    padding: 15,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#8b5cf6',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 10,
+    zIndex: 5,
+    width: 320,
+  },
+  panelTitleHot: {
+    color: '#fbbf24',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  shopItemsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  shopItem: {
+    width: 135,
+    backgroundColor: '#1e293b',
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  shopItemName: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  shopItemPrice: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  rightPanel: {
+    position: 'absolute',
+    top: 250,
+    right: 20,
+    backgroundColor: 'rgba(15,23,42,0.8)',
+    padding: 15,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 10,
+    zIndex: 5,
+    width: 300,
+  },
+  panelTitleDaily: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  questRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  checkboxEmpty: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#64748b',
+    borderRadius: 4,
+    marginRight: 15,
+  },
+  checkboxChecked: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#10b981',
+    borderRadius: 4,
+    marginRight: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkMark: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  questText: {
+    color: '#cbd5e1',
+    fontSize: 16,
+  },
+  rewardText: {
+    color: '#fbbf24',
+    fontSize: 13,
+    marginTop: 2,
+    fontWeight: 'bold'
   }
 });
