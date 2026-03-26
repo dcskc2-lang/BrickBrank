@@ -1,12 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useCallback, useState, useContext, useEffect } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import { AudioContext } from '../app/(tabs)/index';
-import { auth, db } from '../firebaseconfig';
-import { collection, query, where, orderBy, limit, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
-import PauseModal from '../components/BlockBlast/Modals/PauseModal';
-import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
+import BannerAds from '../components/BlockBlast/BannerAds';
+import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import {
   canPlaceShape,
   checkAndClearLines,
@@ -16,7 +14,9 @@ import {
   placeShape
 } from '../components/BlockBlast/GameLogic';
 import { Grid } from '../components/BlockBlast/Grid';
-import BannerAds from '../components/BlockBlast/BannerAds';
+import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
+import PauseModal from '../components/BlockBlast/Modals/PauseModal';
+import { auth, db } from '../firebaseconfig';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -136,25 +136,25 @@ export default function GamePlay({ route, navigation }) {
             }
 
             const triggerGameOver = () => {
-               setIsGameOver(true);
-               if (updateQuestProgress && quests) {
-                 let earnedGold = 0;
-                 if (quests.gamesPlayed < 2 && (quests.gamesPlayed + 1) >= 2) {
-                   earnedGold += 50;
-                 }
-                 const newMaxPoints = Math.max(quests.pointsReached, score + shapeScore + clearedResult.points);
-                 if (quests.pointsReached < 200 && newMaxPoints >= 200) {
-                   earnedGold += 100;
-                 }
-                 updateQuestProgress({ 
-                   gamesPlayed: quests.gamesPlayed + 1,
-                   pointsReached: newMaxPoints
-                 });
-                 if (earnedGold > 0) {
-                     if (addGold) addGold(earnedGold);
-                     if (addExp) addExp(earnedGold);
-                 }
-               }
+              setIsGameOver(true);
+              if (updateQuestProgress && quests) {
+                let earnedGold = 0;
+                if (quests.gamesPlayed < 2 && (quests.gamesPlayed + 1) >= 2) {
+                  earnedGold += 50;
+                }
+                const newMaxPoints = Math.max(quests.pointsReached, score + shapeScore + clearedResult.points);
+                if (quests.pointsReached < 200 && newMaxPoints >= 200) {
+                  earnedGold += 100;
+                }
+                updateQuestProgress({
+                  gamesPlayed: quests.gamesPlayed + 1,
+                  pointsReached: newMaxPoints
+                });
+                if (earnedGold > 0) {
+                  if (addGold) addGold(earnedGold);
+                  if (addExp) addExp(earnedGold);
+                }
+              }
             };
 
             if (nextShapes.every(s => s === null)) {
@@ -185,18 +185,18 @@ export default function GamePlay({ route, navigation }) {
               setIsAnimating(false);
 
               if (clearedResult.goldBlocksCleared > 0) {
-                 let earnedGold = clearedResult.goldBlocksCleared * 10;
-                 if (quests && updateQuestProgress) {
-                    const newBlocks = quests.goldBlocksBroken + clearedResult.goldBlocksCleared;
-                    if (quests.goldBlocksBroken < 10 && newBlocks >= 10) {
-                       earnedGold += 150;
-                    }
-                    updateQuestProgress({ goldBlocksBroken: newBlocks });
-                 }
-                 if (earnedGold > 0) {
-                     if (addGold) addGold(earnedGold);
-                     if (addExp) addExp(earnedGold);
-                 }
+                let earnedGold = clearedResult.goldBlocksCleared * 10;
+                if (quests && updateQuestProgress) {
+                  const newBlocks = quests.goldBlocksBroken + clearedResult.goldBlocksCleared;
+                  if (quests.goldBlocksBroken < 10 && newBlocks >= 10) {
+                    earnedGold += 150;
+                  }
+                  updateQuestProgress({ goldBlocksBroken: newBlocks });
+                }
+                if (earnedGold > 0) {
+                  if (addGold) addGold(earnedGold);
+                  if (addExp) addExp(earnedGold);
+                }
               }
             }, 300);
           } else {
@@ -249,7 +249,7 @@ export default function GamePlay({ route, navigation }) {
     } catch (e) { console.log(e); }
 
     if (userProfile && setUserProfileState && score > (userProfile.highScore || 0)) {
-        setUserProfileState({ ...userProfile, highScore: score });
+      setUserProfileState({ ...userProfile, highScore: score });
     }
 
     navigation.navigate('Menu');
@@ -263,11 +263,11 @@ export default function GamePlay({ route, navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Nút tạm dừng góc trái */}
       <TouchableOpacity style={styles.topLeftBtn} onPress={() => setPauseModalVisible(true)}>
-        <Text style={{fontSize: 24}}>⏸</Text>
+        <Text style={{ fontSize: 24 }}>⏸</Text>
       </TouchableOpacity>
 
       <Text style={styles.title}>BLOCK BLAST</Text>
-      
+
       <View style={styles.scoreBoard}>
         <Text style={styles.scoreText}>Điểm: {score}</Text>
         <Text style={styles.bestScoreText}>👑 Kỷ lục: {Math.max(score, bestScore)}</Text>
@@ -276,12 +276,12 @@ export default function GamePlay({ route, navigation }) {
       <View style={styles.boardContainer}>
         <Grid board={board} onGridLayout={onGridLayout} hoverState={hoverState} cellSize={CELL_SIZE} clearingCells={clearingCells} />
 
-        <GameOverModal 
-          visible={isGameOver} 
-          playerName={playerName} 
-          setPlayerName={setPlayerName} 
-          onSave={saveScoreAndExit} 
-          onSkip={skipAndExit} 
+        <GameOverModal
+          visible={isGameOver}
+          playerName={playerName}
+          setPlayerName={setPlayerName}
+          onSave={saveScoreAndExit}
+          onSkip={skipAndExit}
           isLoggedIn={isLoggedIn}
         />
       </View>
@@ -299,12 +299,12 @@ export default function GamePlay({ route, navigation }) {
         ))}
       </View>
 
-      <PauseModal 
-        visible={isPauseModalVisible} 
-        onClose={() => setPauseModalVisible(false)} 
-        onExit={() => { setPauseModalVisible(false); navigation.navigate('Menu'); }} 
-        soundEnabled={soundEnabled} 
-        toggleSound={toggleSound} 
+      <PauseModal
+        visible={isPauseModalVisible}
+        onClose={() => setPauseModalVisible(false)}
+        onExit={() => { setPauseModalVisible(false); navigation.navigate('Menu'); }}
+        soundEnabled={soundEnabled}
+        toggleSound={toggleSound}
       />
       <BannerAds />
     </SafeAreaView>

@@ -1,28 +1,46 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useEffect } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-
+import { showInterstitial } from '../InterstitialAds';
 export default function GameOverModal({
   visible, playerName, setPlayerName, onSave, onSkip, isLoggedIn
 }) {
+
+  useEffect(() => {
+    if (visible) {
+      showInterstitial().then(success => {
+        if (success) {
+          console.log("Quảng cáo đã hiển thị thành công");
+        } else {
+          console.log("Không có quảng cáo để hiển thị");
+        }
+      });
+    }
+  }, [visible]);
+
   if (!visible) return null;
+
   return (
     <BlurView intensity={80} tint="dark" style={styles.gameOverOverlay}>
-      <Animated.Text entering={FadeInDown.springify().damping(12)} style={styles.gameOverText}>Game Over!</Animated.Text>
+      <Animated.Text entering={FadeInDown.springify().damping(12)} style={styles.gameOverText}>
+        Game Over!
+      </Animated.Text>
+
       <Animated.View entering={FadeInUp.delay(200).springify().damping(12)} style={{ width: '100%', alignItems: 'center' }}>
         {!isLoggedIn ? (
           <TextInput
             style={styles.nameInput}
-          placeholder="Nhập tên của bạn..."
-          placeholderTextColor="#ccc"
-          value={playerName}
-          onChangeText={setPlayerName}
-          maxLength={15}
+            placeholder="Nhập tên của bạn..."
+            placeholderTextColor="#ccc"
+            value={playerName}
+            onChangeText={setPlayerName}
+            maxLength={15}
           />
         ) : (
           <Text style={styles.loggedInNameText}>Lưu điểm với tên: {playerName}</Text>
         )}
+
         <View style={styles.goButtonsRow}>
           <TouchableOpacity style={styles.saveBtn} onPress={onSave}>
             <Text style={styles.saveBtnText}>Lưu Điểm</Text>
@@ -32,6 +50,8 @@ export default function GameOverModal({
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* Xóa dòng <showInterstitial /> ở đây */}
     </BlurView>
   );
 }

@@ -1,28 +1,29 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Audio } from "expo-av";
+import { onAuthStateChanged } from "firebase/auth";
 import { createContext, useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { auth } from "../../firebaseconfig";
 import GamePlay from "../../screens/GamePlay";
 import Menu from "../../screens/Menu";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebaseconfig";
+import InterstitialAds from "../../components/BlockBlast/InterstitialAds";
 
 export const AudioContext = createContext({
   soundEnabled: true,
-  toggleSound: async () => {},
+  toggleSound: async () => { },
   adsRemoved: false,
-  removeAds: async () => {},
-  restoreAds: async () => {},
+  removeAds: async () => { },
+  restoreAds: async () => { },
   isLoggedIn: false,
   userProfile: null,
   currencies: { gold: 0 },
   quests: { gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, lastUpdated: "" },
-  updateQuestProgress: async () => {},
-  addGold: async () => {},
-  addExp: async () => {},
-  setUserProfileState: () => {},
-  setIsLoggedInState: () => {}
+  updateQuestProgress: async () => { },
+  addGold: async () => { },
+  addExp: async () => { },
+  setUserProfileState: () => { },
+  setIsLoggedInState: () => { }
 });
 
 const Stack = createNativeStackNavigator();
@@ -68,8 +69,8 @@ export default function App() {
   const saveAppState = async (newCur, newQuests, customProfile) => {
     const p = customProfile || userProfile;
     if (p && p.name) {
-      await AsyncStorage.setItem(`appState_${p.name}`, JSON.stringify({ 
-        currencies: newCur, 
+      await AsyncStorage.setItem(`appState_${p.name}`, JSON.stringify({
+        currencies: newCur,
         quests: newQuests,
         level: p.level || 1,
         exp: p.exp || 0
@@ -89,9 +90,9 @@ export default function App() {
     let newLevel = userProfile.level || 1;
     let xpNeeded = newLevel * 200;
     while (newExp >= xpNeeded) {
-        newExp -= xpNeeded;
-        newLevel++;
-        xpNeeded = newLevel * 200;
+      newExp -= xpNeeded;
+      newLevel++;
+      xpNeeded = newLevel * 200;
     }
     const newProfile = { ...userProfile, exp: newExp, level: newLevel };
     setUserProfile(newProfile);
@@ -115,7 +116,7 @@ export default function App() {
         if (scores.length > 0) {
           const uScores = scores.filter(s => s.name === baseProfile.name);
           if (uScores.length > 0) {
-             maxScore = Math.max(...uScores.map(s => s.score));
+            maxScore = Math.max(...uScores.map(s => s.score));
           }
         }
       }
@@ -136,7 +137,7 @@ export default function App() {
         setCurrencies({ gold: 0 });
         setQuests({ gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, lastUpdated: new Date().toDateString() });
       }
-    } catch(e) {}
+    } catch (e) { }
     setUserProfile({ ...baseProfile, highScore: maxScore, level, exp });
   };
 
@@ -192,7 +193,7 @@ export default function App() {
   };
 
   return (
-    <AudioContext.Provider value={{ 
+    <AudioContext.Provider value={{
       soundEnabled, toggleSound, adsRemoved, removeAds, restoreAds,
       isLoggedIn, userProfile, currencies, quests, updateQuestProgress, addGold, addExp, setUserProfileState, setIsLoggedInState
     }}>
@@ -209,6 +210,7 @@ export default function App() {
             options={{ headerShown: false }}
           />
         </Stack.Navigator>
+        <InterstitialAds />
       </GestureHandlerRootView>
     </AudioContext.Provider>
   );
