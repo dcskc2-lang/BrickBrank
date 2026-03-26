@@ -77,9 +77,11 @@ export const checkAndClearLines = (board, boardSize = 8) => {
   }
 
   const clearingCells = [];
+  let goldBlocksCleared = 0;
 
   for (const r of rowsToClear) {
     for (let c = 0; c < boardSize; c++) {
+      if (newBoard[r][c] === '#fbbf24') goldBlocksCleared++;
       newBoard[r][c] = '0';
       clearingCells.push({ r, c });
     }
@@ -87,6 +89,9 @@ export const checkAndClearLines = (board, boardSize = 8) => {
 
   for (const c of colsToClear) {
     for (let r = 0; r < boardSize; r++) {
+      if (newBoard[r][c] === '#fbbf24' && !clearingCells.some(cell => cell.r === r && cell.c === c)) {
+        goldBlocksCleared++;
+      }
       newBoard[r][c] = '0';
       if (!clearingCells.some(cell => cell.r === r && cell.c === c)) {
         clearingCells.push({ r, c });
@@ -97,7 +102,7 @@ export const checkAndClearLines = (board, boardSize = 8) => {
   const linesCleared = rowsToClear.length + colsToClear.length;
   const points = linesCleared > 0 ? linesCleared * 10 * linesCleared : 0;
 
-  return { newBoard, linesCleared, points, clearingCells };
+  return { newBoard, linesCleared, points, clearingCells, goldBlocksCleared };
 };
 
 export const checkGameOver = (board, availableShapes, boardSize = 8) => {
@@ -121,8 +126,16 @@ export const getRandomShapes = (count = 3) => {
   const selected = [];
   for (let i = 0; i < count; i++) {
     const randomIndex = Math.floor(Math.random() * SHAPES.length);
+    let shapeColor = SHAPES[randomIndex].color;
+    
+    // 15% chance for a shape to turn into a Gold Block
+    if (Math.random() < 0.15) {
+      shapeColor = '#fbbf24';
+    }
+
     selected.push({
       ...SHAPES[randomIndex],
+      color: shapeColor,
       uid: Math.random().toString(36).substring(2, 11)
     });
   }

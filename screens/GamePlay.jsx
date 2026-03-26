@@ -3,7 +3,7 @@ import React, { useCallback, useState, useContext, useEffect } from 'react';
 import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import { AudioContext } from '../app/(tabs)/index';
-import { db } from '../firebaseconfig';
+import { auth, db } from '../firebaseconfig';
 import { collection, query, where, orderBy, limit, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import PauseModal from '../components/BlockBlast/Modals/PauseModal';
 import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
@@ -31,11 +31,17 @@ export default function GamePlay({ route, navigation }) {
   const [isPauseModalVisible, setPauseModalVisible] = useState(false);
   const [clearingCells, setClearingCells] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
-  const { soundEnabled, toggleSound } = useContext(AudioContext);
+  const { soundEnabled, toggleSound, isLoggedIn, userProfile, updateQuestProgress, quests, addGold, addExp, setUserProfileState } = useContext(AudioContext);
   const [gridPos, setGridPos] = useState({ pageX: 0, pageY: 0, width: 0, height: 0 });
   const [hoverState, setHoverState] = useState(null);
   const [playerName, setPlayerName] = useState('');
   const [bestScore, setBestScore] = useState(0);
+
+  useEffect(() => {
+    if (isLoggedIn && userProfile) {
+      setPlayerName(userProfile.name);
+    }
+  }, [isLoggedIn, userProfile]);
 
   useEffect(() => {
     const fetchBestScore = async () => {
@@ -129,16 +135,38 @@ export default function GamePlay({ route, navigation }) {
               nextShapes[shapeIndex] = null;
             }
 
+            const triggerGameOver = () => {
+               setIsGameOver(true);
+               if (updateQuestProgress && quests) {
+                 let earnedGold = 0;
+                 if (quests.gamesPlayed < 2 && (quests.gamesPlayed + 1) >= 2) {
+                   earnedGold += 50;
+                 }
+                 const newMaxPoints = Math.max(quests.pointsReached, score + shapeScore + clearedResult.points);
+                 if (quests.pointsReached < 200 && newMaxPoints >= 200) {
+                   earnedGold += 100;
+                 }
+                 updateQuestProgress({ 
+                   gamesPlayed: quests.gamesPlayed + 1,
+                   pointsReached: newMaxPoints
+                 });
+                 if (earnedGold > 0) {
+                     if (addGold) addGold(earnedGold);
+                     if (addExp) addExp(earnedGold);
+                 }
+               }
+            };
+
             if (nextShapes.every(s => s === null)) {
               const newRandomShapes = getRandomShapes(3);
               setAvailableShapes(newRandomShapes);
               if (checkGameOver(finalBoard, newRandomShapes, boardSize)) {
-                setIsGameOver(true);
+                triggerGameOver();
               }
             } else {
               setAvailableShapes(nextShapes);
               if (checkGameOver(finalBoard, nextShapes, boardSize)) {
-                setIsGameOver(true);
+                triggerGameOver();
               }
             }
           };
@@ -155,6 +183,21 @@ export default function GamePlay({ route, navigation }) {
               setClearingCells([]);
               processNextMove(clearedResult.newBoard);
               setIsAnimating(false);
+
+              if (clearedResult.goldBlocksCleared > 0) {
+                 let earnedGold = clearedResult.goldBlocksCleared * 10;
+                 if (quests && updateQuestProgress) {
+                    const newBlocks = quests.goldBlocksBroken + clearedResult.goldBlocksCleared;
+                    if (quests.goldBlocksBroken < 10 && newBlocks >= 10) {
+                       earnedGold += 150;
+                    }
+                    updateQuestProgress({ goldBlocksBroken: newBlocks });
+                 }
+                 if (earnedGold > 0) {
+                     if (addGold) addGold(earnedGold);
+                     if (addExp) addExp(earnedGold);
+                 }
+              }
             }, 300);
           } else {
             setBoard(clearedResult.newBoard);
@@ -190,24 +233,25 @@ export default function GamePlay({ route, navigation }) {
         const top10Local = scoresArray.slice(0, 10);
         await AsyncStorage.setItem('localScores', JSON.stringify(top10Local));
 
-        let deviceId = await AsyncStorage.getItem('deviceId');
-        if (!deviceId) {
-          deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-          await AsyncStorage.setItem('deviceId', deviceId);
-        }
-
-        const docRef = doc(db, 'worldLeaderboard', deviceId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (score > data.score) {
-            await setDoc(docRef, newScoreObj, { merge: true });
+        if (auth.currentUser) {
+          const docRef = doc(db, 'worldLeaderboard', auth.currentUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (score > data.score) {
+              await setDoc(docRef, newScoreObj, { merge: true });
+            }
+          } else {
+            await setDoc(docRef, newScoreObj);
           }
-        } else {
-          await setDoc(docRef, newScoreObj);
         }
       }
     } catch (e) { console.log(e); }
+
+    if (userProfile && setUserProfileState && score > (userProfile.highScore || 0)) {
+        setUserProfileState({ ...userProfile, highScore: score });
+    }
+
     navigation.navigate('Menu');
   };
 
@@ -238,6 +282,7 @@ export default function GamePlay({ route, navigation }) {
           setPlayerName={setPlayerName} 
           onSave={saveScoreAndExit} 
           onSkip={skipAndExit} 
+          isLoggedIn={isLoggedIn}
         />
       </View>
 
