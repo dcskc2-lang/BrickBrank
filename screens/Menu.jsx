@@ -3,7 +3,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useContext, useEffect, useState } from 'react';
-import { Alert, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInRight, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { AudioContext } from '../app/(tabs)/index';
 import BannerAds from '../components/BlockBlast/BannerAds';
@@ -18,13 +19,14 @@ import { db, auth } from '../firebaseconfig';
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function Menu({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [isSelectModalVisible, setSelectModalVisible] = useState(false);
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
   const [isScoreModalVisible, setScoreModalVisible] = useState(false);
   const [isAboutModalVisible, setAboutModalVisible] = useState(false);
   const [isEditProfileModalVisible, setEditProfileModalVisible] = useState(false);
 
-  const { adsRemoved, restoreAds, soundEnabled, toggleSound, setIsLoggedInState, setUserProfileState } = useContext(AudioContext);
+  const { adsRemoved, removeAds, restoreAds, soundEnabled, toggleSound, setIsLoggedInState, setUserProfileState } = useContext(AudioContext);
   const authContext = useContext(AudioContext);
   const [localScores, setLocalScores] = useState([]);
   const [worldScores, setWorldScores] = useState([]);
@@ -159,7 +161,7 @@ export default function Menu({ navigation }) {
       <View style={styles.darkOverlay}>
 
         {/* TOP BAR */}
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { marginTop: insets.top ? insets.top + 10 : 40 }]}>
           {/* Default Profile Toggle (Left) */}
           {isLoggedIn ? (
             <TouchableOpacity style={styles.profileContainer} onPress={toggleProfile} activeOpacity={0.8}>
@@ -229,87 +231,88 @@ export default function Menu({ navigation }) {
           </View>
         )}
 
-        {/* --- NHIỆM VỤ HÀNG NGÀY (Phải) --- */}
-        <View style={styles.rightPanel}>
-          <Text style={styles.panelTitleDaily}>NHIỆM VỤ HÀNG NGÀY</Text>
-          <View style={styles.questRow}>
-            <View style={quests.gamesPlayed >= 2 ? styles.checkboxChecked : styles.checkboxEmpty}>
-              {quests.gamesPlayed >= 2 && <Text style={styles.checkMark}>✓</Text>}
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+          <View style={styles.centerContainer}>
+            <Text style={styles.title}>BRICK BRACK</Text>
+
+            {/* CHƠI NGAY */}
+            <View style={styles.playBtnContainer}>
+              <TouchableOpacity
+                onPress={() => {
+                  const sizes = [6, 7, 8, 9, 10];
+                  const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
+                  playMode(randomSize);
+                }}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#4facfe', '#a18cd1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.playNowBtn}
+                >
+                  <Text style={styles.playNowText}>CHƠI NGAY</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-            <View>
-              <Text style={[styles.questText, quests.gamesPlayed >= 2 && {color: '#10b981'}]}>
-                 Chơi 2 Màn ({Math.min(quests.gamesPlayed, 2)}/2)
-              </Text>
-              <Text style={styles.rewardText}>🎁 50 Vàng - 🌟 50 XP</Text>
+
+            {/* CHỌN MÀN CHƠI */}
+            <AnimatedTouchableOpacity
+              style={[styles.secondaryBtn, { transform: [{ scale: pulseScale }] }]}
+              onPress={() => setSelectModalVisible(true)}
+            >
+              <Text style={styles.secondaryBtnText}>CHỌN MÀN CHƠI</Text>
+            </AnimatedTouchableOpacity>
+
+            {/* CÀI ĐẶT */}
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => setSettingsModalVisible(true)}>
+              <Text style={styles.secondaryBtnText}>CÀI ĐẶT</Text>
+            </TouchableOpacity>
+
+            {/* --- NHIỆM VỤ HÀNG NGÀY --- */}
+            <View style={styles.questsPanel}>
+              <Text style={styles.panelTitleDaily}>NHIỆM VỤ HÀNG NGÀY</Text>
+              <View style={styles.questRow}>
+                <View style={quests.gamesPlayed >= 2 ? styles.checkboxChecked : styles.checkboxEmpty}>
+                  {quests.gamesPlayed >= 2 && <Text style={styles.checkMark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.questText, quests.gamesPlayed >= 2 && {color: '#10b981'}]}>
+                     Chơi 2 Màn ({Math.min(quests.gamesPlayed, 2)}/2)
+                  </Text>
+                  <Text style={styles.rewardText}>🎁 50 Vàng - 🌟 50 XP</Text>
+                </View>
+              </View>
+              <View style={styles.questRow}>
+                <View style={quests.pointsReached >= 200 ? styles.checkboxChecked : styles.checkboxEmpty}>
+                  {quests.pointsReached >= 200 && <Text style={styles.checkMark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.questText, quests.pointsReached >= 200 && {color: '#10b981'}]}>
+                     Đạt 200 Điểm ({Math.min(quests.pointsReached, 200)}/200)
+                  </Text>
+                  <Text style={styles.rewardText}>🎁 100 Vàng - 🌟 100 XP</Text>
+                </View>
+              </View>
+              <View style={styles.questRow}>
+                <View style={quests.goldBlocksBroken >= 10 ? styles.checkboxChecked : styles.checkboxEmpty}>
+                  {quests.goldBlocksBroken >= 10 && <Text style={styles.checkMark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.questText, quests.goldBlocksBroken >= 10 && {color: '#10b981'}]}>
+                     Phá 10 Khối Vàng ({Math.min(quests.goldBlocksBroken, 10)}/10)
+                  </Text>
+                  <Text style={styles.rewardText}>🎁 150 Vàng - 🌟 150 XP</Text>
+                </View>
+              </View>
             </View>
           </View>
-          <View style={styles.questRow}>
-            <View style={quests.pointsReached >= 200 ? styles.checkboxChecked : styles.checkboxEmpty}>
-              {quests.pointsReached >= 200 && <Text style={styles.checkMark}>✓</Text>}
-            </View>
-            <View>
-              <Text style={[styles.questText, quests.pointsReached >= 200 && {color: '#10b981'}]}>
-                 Đạt 200 Điểm ({Math.min(quests.pointsReached, 200)}/200)
-              </Text>
-              <Text style={styles.rewardText}>🎁 100 Vàng - 🌟 100 XP</Text>
-            </View>
-          </View>
-          <View style={styles.questRow}>
-            <View style={quests.goldBlocksBroken >= 10 ? styles.checkboxChecked : styles.checkboxEmpty}>
-              {quests.goldBlocksBroken >= 10 && <Text style={styles.checkMark}>✓</Text>}
-            </View>
-            <View>
-              <Text style={[styles.questText, quests.goldBlocksBroken >= 10 && {color: '#10b981'}]}>
-                 Phá 10 Khối Vàng ({Math.min(quests.goldBlocksBroken, 10)}/10)
-              </Text>
-              <Text style={styles.rewardText}>🎁 150 Vàng - 🌟 150 XP</Text>
-            </View>
-          </View>
-        </View>
+        </ScrollView>
 
         {/* Nút About Us góc dưới phải */}
         <TouchableOpacity style={styles.bottomRightBtn} onPress={() => setAboutModalVisible(true)}>
           <Text style={styles.iconFallbackText}>ℹ️</Text>
         </TouchableOpacity>
-
-        <View style={styles.centerContainer}>
-          <Text style={styles.title}>BRICK BRACK</Text>
-
-          {/* CHƠI NGAY */}
-          <View style={styles.playBtnContainer}>
-            <TouchableOpacity
-              onPress={() => {
-                const sizes = [6, 7, 8, 9, 10];
-                const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
-                playMode(randomSize);
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#4facfe', '#a18cd1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.playNowBtn}
-              >
-                <Text style={styles.playNowText}>CHƠI NGAY</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          {/* CHỌN MÀN CHƠI */}
-          <AnimatedTouchableOpacity
-            style={[styles.secondaryBtn, { transform: [{ scale: pulseScale }] }]}
-            onPress={() => setSelectModalVisible(true)}
-          >
-            <Text style={styles.secondaryBtnText}>CHỌN MÀN CHƠI</Text>
-          </AnimatedTouchableOpacity>
-
-          {/* CÀI ĐẶT */}
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => setSettingsModalVisible(true)}>
-            <Text style={styles.secondaryBtnText}>CÀI ĐẶT</Text>
-          </TouchableOpacity>
-
-        </View>
 
         <BannerAds />
 
@@ -369,9 +372,9 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 50,
+    paddingHorizontal: 15,
     zIndex: 10,
   },
   profileContainer: {
@@ -421,6 +424,9 @@ const styles = StyleSheet.create({
   topRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 10,
+    flexWrap: 'wrap',
+    rowGap: 10
   },
   cartBtn: {
     width: 44,
@@ -486,10 +492,9 @@ const styles = StyleSheet.create({
     textShadowRadius: 20,
   },
   centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingTop: 40,
+    alignItems: 'center',
+    width: '100%',
   },
   playBtnContainer: {
     shadowColor: '#b5179e',
@@ -739,12 +744,10 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 12,
   },
-  rightPanel: {
-    position: 'absolute',
-    top: 250,
-    right: 20,
+  questsPanel: {
+    marginTop: 30,
     backgroundColor: 'rgba(15,23,42,0.8)',
-    padding: 15,
+    padding: 20,
     borderRadius: 15,
     borderWidth: 2,
     borderColor: '#3b82f6',
@@ -753,8 +756,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 15,
     elevation: 10,
-    zIndex: 5,
-    width: 300,
+    width: '90%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   panelTitleDaily: {
     color: '#ffffff',
