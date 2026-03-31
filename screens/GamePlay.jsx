@@ -3,7 +3,6 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AudioContext } from '../app/(tabs)/index';
-import BannerAds from '../components/BlockBlast/BannerAds';
 import { DraggableShape } from '../components/BlockBlast/DraggableShape';
 import {
   canPlaceShape,
@@ -14,6 +13,7 @@ import {
   placeShape
 } from '../components/BlockBlast/GameLogic';
 import { Grid } from '../components/BlockBlast/Grid';
+import { showInterstitial } from '../components/BlockBlast/InterstitialAds';
 import GameOverModal from '../components/BlockBlast/Modals/GameOverModal';
 import PauseModal from '../components/BlockBlast/Modals/PauseModal';
 import { auth, db } from '../firebaseconfig';
@@ -31,7 +31,7 @@ export default function GamePlay({ route, navigation }) {
   const [isPauseModalVisible, setPauseModalVisible] = useState(false);
   const [clearingCells, setClearingCells] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
-  const { soundEnabled, toggleSound, isLoggedIn, userProfile, updateQuestProgress, quests, addGold, addExp, setUserProfileState } = useContext(AudioContext);
+  const { soundEnabled, toggleSound, isLoggedIn, userProfile, updateQuestProgress, quests, addGold, addExp, setUserProfileState, adsRemoved } = useContext(AudioContext);
   const [gridPos, setGridPos] = useState({ pageX: 0, pageY: 0, width: 0, height: 0 });
   const [hoverState, setHoverState] = useState(null);
   const [playerName, setPlayerName] = useState('');
@@ -137,6 +137,7 @@ export default function GamePlay({ route, navigation }) {
 
             const triggerGameOver = () => {
               setIsGameOver(true);
+              showInterstitial(adsRemoved);
               if (updateQuestProgress && quests) {
                 let earnedGold = 0;
                 if (quests.gamesPlayed < 2 && (quests.gamesPlayed + 1) >= 2) {
@@ -306,7 +307,6 @@ export default function GamePlay({ route, navigation }) {
         soundEnabled={soundEnabled}
         toggleSound={toggleSound}
       />
-      <BannerAds />
     </SafeAreaView>
   );
 }

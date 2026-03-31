@@ -1,23 +1,9 @@
 import { BlurView } from 'expo-blur';
-import { useEffect } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { showInterstitial } from '../InterstitialAds';
 export default function GameOverModal({
   visible, playerName, setPlayerName, onSave, onSkip, isLoggedIn
 }) {
-
-  useEffect(() => {
-    if (visible) {
-      showInterstitial().then(success => {
-        if (success) {
-          console.log("Quảng cáo đã hiển thị thành công");
-        } else {
-          console.log("Không có quảng cáo để hiển thị");
-        }
-      });
-    }
-  }, [visible]);
 
   if (!visible) return null;
 

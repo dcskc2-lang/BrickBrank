@@ -1,20 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { useContext, useEffect, useState } from 'react';
-import { Alert, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AudioContext } from '../app/(tabs)/index';
-import BannerAds from '../components/BlockBlast/BannerAds';
 import AboutUsModal from '../components/BlockBlast/Modals/AboutUsModal';
+import EditProfileModal from '../components/BlockBlast/Modals/EditProfileModal';
 import LoginModal from '../components/BlockBlast/Modals/LoginModal';
 import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
 import SelectModeModal from '../components/BlockBlast/Modals/SelectModeModal';
 import SettingsModal from '../components/BlockBlast/Modals/SettingsModal';
-import EditProfileModal from '../components/BlockBlast/Modals/EditProfileModal';
-import { db, auth } from '../firebaseconfig';
+import { auth, db } from '../firebaseconfig';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -313,8 +312,6 @@ export default function Menu({ navigation }) {
         <TouchableOpacity style={styles.bottomRightBtn} onPress={() => setAboutModalVisible(true)}>
           <Text style={styles.iconFallbackText}>ℹ️</Text>
         </TouchableOpacity>
-
-        <BannerAds />
 
         <LoginModal
           visible={isLoginModalVisible}

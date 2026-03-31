@@ -1,6 +1,6 @@
-import { useState, useContext } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
+import { useContext, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { AudioContext } from '../../app/(tabs)/index';
 
 let BannerAd, BannerAdSize, TestIds;
@@ -18,7 +18,6 @@ if (!isWeb && !isExpoGo) {
 
 const BannerAds = () => {
     const [isLoaded, setIsLoaded] = useState(false);
-    const [errorMessage, setErrorMessage] = useState(null);
     const { adsRemoved } = useContext(AudioContext);
 
     if (adsRemoved) return null;
@@ -41,12 +40,7 @@ const BannerAds = () => {
         });
 
     return (
-        <View style={styles.bannerContainer}>
-            {errorMessage && (
-                <Text style={styles.errorText}>
-                    Quảng cáo lỗi: {errorMessage}
-                </Text>
-            )}
+        <View style={[styles.bannerContainer, !isLoaded && { height: 0, opacity: 0 }]}>
             <BannerAd
                 unitId={bannerAdUnitId}
                 size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
@@ -57,20 +51,15 @@ const BannerAds = () => {
                 onAdLoaded={() => {
                     console.log('Banner quảng cáo đã tải thành công');
                     setIsLoaded(true);
-                    setErrorMessage(null);
                 }}
                 onAdFailedToLoad={(error) => {
                     console.error('Banner quảng cáo tải thất bại:', error);
-                    setErrorMessage(error.message || 'Không tải được quảng cáo');
                     setIsLoaded(false);
                 }}
                 onAdOpened={() => console.log('Người dùng mở quảng cáo')}
                 onAdClosed={() => console.log('Quảng cáo đã đóng')}
                 onAdImpressionRecorded={() => console.log('Quảng cáo đã ghi nhận impression')}
             />
-            {!isLoaded && !errorMessage && (
-                <Text style={styles.loadingText}>Đang tải quảng cáo...</Text>
-            )}
         </View>
     );
 };
@@ -80,7 +69,6 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         backgroundColor: '#000',
-        position: 'absolute',
         bottom: 0,
     },
     loadingText: {
