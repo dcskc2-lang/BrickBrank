@@ -42,6 +42,7 @@ export const loadInterstitial = async () => {
     const adUnitId = __DEV__
         ? TestIds.INTERSTITIAL
         : 'ca-app-pub-1666762810401308/8766557743';
+        //: 'ca-app-pub-1666762810401308/8766557743';
 
     if (unsubLoaded) unsubLoaded();
     if (unsubError) unsubError();

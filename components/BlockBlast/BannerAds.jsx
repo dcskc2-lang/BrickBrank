@@ -8,12 +8,12 @@ const isWeb = Platform.OS === 'web';
 const isExpoGo = Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient';
 
 if (!isWeb && !isExpoGo) {
-  try {
-    const ads = require('react-native-google-mobile-ads');
-    BannerAd = ads.BannerAd;
-    BannerAdSize = ads.BannerAdSize;
-    TestIds = ads.TestIds;
-  } catch(e) { console.log(e) }
+    try {
+        const ads = require('react-native-google-mobile-ads');
+        BannerAd = ads.BannerAd;
+        BannerAdSize = ads.BannerAdSize;
+        TestIds = ads.TestIds;
+    } catch (e) { console.log(e) }
 }
 
 const BannerAds = () => {
@@ -26,18 +26,16 @@ const BannerAds = () => {
         return (
             <View style={styles.bannerContainer}>
                 <Text style={styles.loadingText}>
-                  {isWeb ? '[Quảng cáo ẩn trên Web]' : '[Quảng cáo ẩn trên Expo Go]'}
+                    {isWeb ? '[Quảng cáo ẩn trên Web]' : '[Quảng cáo ẩn trên Expo Go]'}
                 </Text>
             </View>
         );
     }
 
     const bannerAdUnitId = __DEV__
-        ? TestIds.BANNER
-        : Platform.select({
-            android: 'ca-app-pub-1666762810401308/4871477553',
-            default: TestIds.BANNER,
-        });
+        ? TestIds.INTERSTITIAL
+        : 'ca-app-pub-1666762810401308/4871477553'
+        ;
 
     return (
         <View style={[styles.bannerContainer, !isLoaded && { height: 0, opacity: 0 }]}>
