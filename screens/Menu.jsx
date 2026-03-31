@@ -13,6 +13,7 @@ import LoginModal from '../components/BlockBlast/Modals/LoginModal';
 import ScoreModal from '../components/BlockBlast/Modals/ScoreModal';
 import SelectModeModal from '../components/BlockBlast/Modals/SelectModeModal';
 import SettingsModal from '../components/BlockBlast/Modals/SettingsModal';
+import QuestModal from '../components/BlockBlast/Modals/QuestModal';
 import { auth, db } from '../firebaseconfig';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -24,6 +25,7 @@ export default function Menu({ navigation }) {
   const [isScoreModalVisible, setScoreModalVisible] = useState(false);
   const [isAboutModalVisible, setAboutModalVisible] = useState(false);
   const [isEditProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [isQuestModalVisible, setQuestModalVisible] = useState(false);
 
   const { adsRemoved, removeAds, restoreAds, soundEnabled, toggleSound, setIsLoggedInState, setUserProfileState } = useContext(AudioContext);
   const authContext = useContext(AudioContext);
@@ -153,7 +155,7 @@ export default function Menu({ navigation }) {
 
   return (
     <ImageBackground
-      source={{ uri: 'https://media.discordapp.net/attachments/1478592050587893942/1484265800356466769/AOI_d_955wRCJmah7aZjIO_uTuhYswIWK6npfQqOFTRx3JNVLKp4bZzwQiFt9aOVmcNrQrdmvt6ipzphEbakUSoIAEhfsCj_dy_Pa6fsjTVvVhOmN2lYn8ZOLRR4ENNNDTRDho8Z0b8JtxqG8vUlTVD2lNtCB6uqRX_3Jh6SSH3X8KZlbof0jws1600-rj.png?ex=69bd99bf&is=69bc483f&hm=f551c84acbb4f7a8d3a22e5e73ed737b765a453abe8d9439060979a34117b6a8&=&format=webp&quality=lossless&width=1466&height=800' }}
+      source={require('../assets/BG.png')}
       style={styles.container}
       resizeMode="cover"
     >
@@ -181,8 +183,8 @@ export default function Menu({ navigation }) {
           <View style={styles.topRightActions}>
             {/* Gold */}
             <View style={styles.currencyBtnGold}>
-              <Text style={styles.iconFallbackText}></Text>
-              <Text style={styles.currencyTextGold}>VÀNG: {currencies.gold}</Text>
+              <Text style={styles.iconFallbackText}>🪙</Text>
+              <Text style={styles.currencyTextGold} adjustsFontSizeToFit numberOfLines={1}>{currencies.gold}</Text>
             </View>
 
             <TouchableOpacity style={styles.cartBtn} onPress={handleBuyAds}>
@@ -191,7 +193,12 @@ export default function Menu({ navigation }) {
 
             <TouchableOpacity style={styles.rankBtn} onPress={openScoreBoard}>
               <Text style={styles.iconFallbackText}>🏆</Text>
-              <Text style={styles.rankText}>RANK</Text>
+              <Text style={styles.rankText} adjustsFontSizeToFit numberOfLines={1}>RANK</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.questBtn} onPress={() => setQuestModalVisible(true)}>
+              <Text style={styles.iconFallbackText}>🎁</Text>
+              <Text style={styles.questText} adjustsFontSizeToFit numberOfLines={1}>NHIỆM VỤ</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -267,44 +274,6 @@ export default function Menu({ navigation }) {
             <TouchableOpacity style={styles.secondaryBtn} onPress={() => setSettingsModalVisible(true)}>
               <Text style={styles.secondaryBtnText}>CÀI ĐẶT</Text>
             </TouchableOpacity>
-
-            {/* --- NHIỆM VỤ HÀNG NGÀY --- */}
-            <View style={styles.questsPanel}>
-              <Text style={styles.panelTitleDaily}>NHIỆM VỤ HÀNG NGÀY</Text>
-              <View style={styles.questRow}>
-                <View style={quests.gamesPlayed >= 2 ? styles.checkboxChecked : styles.checkboxEmpty}>
-                  {quests.gamesPlayed >= 2 && <Text style={styles.checkMark}>✓</Text>}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.questText, quests.gamesPlayed >= 2 && {color: '#10b981'}]}>
-                     Chơi 2 Màn ({Math.min(quests.gamesPlayed, 2)}/2)
-                  </Text>
-                  <Text style={styles.rewardText}>🎁 50 Vàng - 🌟 50 XP</Text>
-                </View>
-              </View>
-              <View style={styles.questRow}>
-                <View style={quests.pointsReached >= 200 ? styles.checkboxChecked : styles.checkboxEmpty}>
-                  {quests.pointsReached >= 200 && <Text style={styles.checkMark}>✓</Text>}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.questText, quests.pointsReached >= 200 && {color: '#10b981'}]}>
-                     Đạt 200 Điểm ({Math.min(quests.pointsReached, 200)}/200)
-                  </Text>
-                  <Text style={styles.rewardText}>🎁 100 Vàng - 🌟 100 XP</Text>
-                </View>
-              </View>
-              <View style={styles.questRow}>
-                <View style={quests.goldBlocksBroken >= 10 ? styles.checkboxChecked : styles.checkboxEmpty}>
-                  {quests.goldBlocksBroken >= 10 && <Text style={styles.checkMark}>✓</Text>}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.questText, quests.goldBlocksBroken >= 10 && {color: '#10b981'}]}>
-                     Phá 10 Khối Vàng ({Math.min(quests.goldBlocksBroken, 10)}/10)
-                  </Text>
-                  <Text style={styles.rewardText}>🎁 150 Vàng - 🌟 150 XP</Text>
-                </View>
-              </View>
-            </View>
           </View>
         </ScrollView>
 
@@ -346,6 +315,11 @@ export default function Menu({ navigation }) {
           onClose={() => setAboutModalVisible(false)}
         />
 
+        <QuestModal 
+          visible={isQuestModalVisible}
+          onClose={() => setQuestModalVisible(false)}
+        />
+
         <EditProfileModal
           visible={isEditProfileModalVisible}
           onClose={() => setEditProfileModalVisible(false)}
@@ -367,10 +341,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     paddingHorizontal: 15,
     zIndex: 10,
   },
@@ -420,21 +392,21 @@ const styles = StyleSheet.create({
   },
   topRightActions: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
-    flexWrap: 'wrap',
-    rowGap: 10
+    marginTop: 15,
+    width: '100%',
   },
   cartBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(30,30,30,0.8)',
     borderWidth: 2,
     borderColor: '#ef4444',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 6,
     shadowColor: '#ef4444',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
@@ -442,14 +414,17 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   rankBtn: {
+    flex: 1,
     flexDirection: 'row',
-    height: 44,
-    borderRadius: 22,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(30,30,30,0.8)',
     borderWidth: 2,
     borderColor: '#fbbf24',
     alignItems: 'center',
-    paddingHorizontal: 15,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    marginRight: 6,
     shadowColor: '#fbbf24',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
@@ -459,8 +434,31 @@ const styles = StyleSheet.create({
   rankText: {
     color: '#fcd34d',
     fontWeight: 'bold',
-    marginLeft: 6,
-    fontSize: 16,
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  questBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(30,30,30,0.8)',
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  questText: {
+    color: '#93c5fd',
+    fontWeight: 'bold',
+    marginLeft: 4,
+    fontSize: 12,
   },
   bottomRightBtn: {
     position: 'absolute',
@@ -489,7 +487,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 20,
   },
   centerContainer: {
-    paddingTop: 40,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
   },
@@ -572,15 +571,17 @@ const styles = StyleSheet.create({
     fontWeight: '900'
   },
   currencyBtnGold: {
+    flex: 1,
     flexDirection: 'row',
-    height: 44,
-    borderRadius: 22,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(30,30,30,0.8)',
     borderWidth: 2,
     borderColor: '#fbbf24',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    marginRight: 15,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    marginRight: 6,
     shadowColor: '#fbbf24',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
@@ -606,7 +607,7 @@ const styles = StyleSheet.create({
   currencyTextGold: {
     color: '#fcd34d',
     fontWeight: 'bold',
-    marginLeft: 6,
+    marginLeft: 4,
     fontSize: 14,
   },
   currencyTextDiamond: {

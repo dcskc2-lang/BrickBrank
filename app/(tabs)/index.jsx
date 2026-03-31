@@ -18,7 +18,7 @@ export const AudioContext = createContext({
   isLoggedIn: false,
   userProfile: null,
   currencies: { gold: 0 },
-  quests: { gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, lastUpdated: "" },
+  quests: { gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, gamesPlayedClaimed: false, pointsReachedClaimed: false, goldBlocksBrokenClaimed: false, lastUpdated: "" },
   updateQuestProgress: async () => { },
   addGold: async () => { },
   addExp: async () => { },
@@ -41,6 +41,9 @@ export default function App() {
     gamesPlayed: 0,
     pointsReached: 0,
     goldBlocksBroken: 0,
+    gamesPlayedClaimed: false,
+    pointsReachedClaimed: false,
+    goldBlocksBrokenClaimed: false,
     lastUpdated: new Date().toDateString()
   });
 
@@ -128,14 +131,22 @@ export default function App() {
         if (parsed.currencies) setCurrencies(parsed.currencies);
         if (parsed.quests) {
           if (parsed.quests.lastUpdated !== new Date().toDateString()) {
-            setQuests({ gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, lastUpdated: new Date().toDateString() });
+            setQuests({ gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, gamesPlayedClaimed: false, pointsReachedClaimed: false, goldBlocksBrokenClaimed: false, lastUpdated: new Date().toDateString() });
           } else {
-            setQuests(parsed.quests);
+            setQuests({
+              gamesPlayed: parsed.quests.gamesPlayed || 0,
+              pointsReached: parsed.quests.pointsReached || 0,
+              goldBlocksBroken: parsed.quests.goldBlocksBroken || 0,
+              gamesPlayedClaimed: !!parsed.quests.gamesPlayedClaimed,
+              pointsReachedClaimed: !!parsed.quests.pointsReachedClaimed,
+              goldBlocksBrokenClaimed: !!parsed.quests.goldBlocksBrokenClaimed,
+              lastUpdated: parsed.quests.lastUpdated
+            });
           }
         }
       } else {
         setCurrencies({ gold: 0 });
-        setQuests({ gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, lastUpdated: new Date().toDateString() });
+        setQuests({ gamesPlayed: 0, pointsReached: 0, goldBlocksBroken: 0, gamesPlayedClaimed: false, pointsReachedClaimed: false, goldBlocksBrokenClaimed: false, lastUpdated: new Date().toDateString() });
       }
     } catch (e) { }
     setUserProfile({ ...baseProfile, highScore: maxScore, level, exp });

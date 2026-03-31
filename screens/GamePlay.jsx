@@ -139,22 +139,11 @@ export default function GamePlay({ route, navigation }) {
               setIsGameOver(true);
               showInterstitial(adsRemoved);
               if (updateQuestProgress && quests) {
-                let earnedGold = 0;
-                if (quests.gamesPlayed < 2 && (quests.gamesPlayed + 1) >= 2) {
-                  earnedGold += 50;
-                }
                 const newMaxPoints = Math.max(quests.pointsReached, score + shapeScore + clearedResult.points);
-                if (quests.pointsReached < 200 && newMaxPoints >= 200) {
-                  earnedGold += 100;
-                }
                 updateQuestProgress({
                   gamesPlayed: quests.gamesPlayed + 1,
                   pointsReached: newMaxPoints
                 });
-                if (earnedGold > 0) {
-                  if (addGold) addGold(earnedGold);
-                  if (addExp) addExp(earnedGold);
-                }
               }
             };
 
@@ -189,14 +178,10 @@ export default function GamePlay({ route, navigation }) {
                 let earnedGold = clearedResult.goldBlocksCleared * 10;
                 if (quests && updateQuestProgress) {
                   const newBlocks = quests.goldBlocksBroken + clearedResult.goldBlocksCleared;
-                  if (quests.goldBlocksBroken < 10 && newBlocks >= 10) {
-                    earnedGold += 150;
-                  }
                   updateQuestProgress({ goldBlocksBroken: newBlocks });
                 }
                 if (earnedGold > 0) {
                   if (addGold) addGold(earnedGold);
-                  if (addExp) addExp(earnedGold);
                 }
               }
             }, 300);
