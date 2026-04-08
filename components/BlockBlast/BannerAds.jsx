@@ -33,8 +33,8 @@ const BannerAds = () => {
     }
 
     const bannerAdUnitId = __DEV__
-        ? TestIds.INTERSTITIAL
-        : 'ca-app-pub-1666762810401308/4871477553'
+        ? TestIds.BANNER
+        : TestIds.BANNER
         ;
 
     return (
